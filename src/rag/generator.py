@@ -22,7 +22,7 @@ class AnswerGenerator:
 
         client = Groq(api_key=self.settings.groq_api_key)
         completion = client.chat.completions.create(
-            model=self.settings.llm_model,
+            model=self.settings.groq_model,
             messages=messages,
             temperature=0.3,
             max_tokens=2048,
@@ -30,10 +30,11 @@ class AnswerGenerator:
         return completion.choices[0].message.content or ""
 
     def _generate_with_ollama(self, messages: list[dict[str, str]]) -> str:
+        model_name = self.settings.ollama_model or self.settings.llm_model or "llama3.1:8b"
         response = httpx.post(
             f"{self.settings.ollama_base_url}/api/chat",
             json={
-                "model": "llama3.1:8b",
+                "model": model_name,
                 "messages": messages,
                 "stream": False,
                 "options": {"temperature": 0.3},

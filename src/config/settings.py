@@ -33,7 +33,9 @@ class Settings(BaseSettings):
     ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
 
     embedding_model: str = Field(default="BAAI/bge-large-en-v1.5", alias="EMBEDDING_MODEL")
-    llm_model: str = Field(default="llama-3.1-70b-versatile", alias="LLM_MODEL")
+    llm_model: str | None = Field(default=None, alias="LLM_MODEL")
+    groq_model: str = Field(default="llama-3.1-70b-versatile", alias="GROQ_MODEL")
+    ollama_model: str | None = Field(default=None, alias="OLLAMA_MODEL")
     chunk_size: int = Field(default=500, alias="CHUNK_SIZE")
     chunk_overlap: int = Field(default=50, alias="CHUNK_OVERLAP")
     retrieval_top_k: int = Field(default=5, alias="RETRIEVAL_TOP_K")
