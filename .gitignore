@@ -26,3 +26,5 @@ data/graph/*
 !data/processed/.gitkeep
 !data/chunks/.gitkeep
 !data/graph/.gitkeep
+
+CLAUDE.md
