@@ -28,3 +28,6 @@ data/graph/*
 !data/graph/.gitkeep
 
 CLAUDE.md
+.claude
+/_bmad
+/_bmad-output

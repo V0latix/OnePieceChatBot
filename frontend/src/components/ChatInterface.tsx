@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 
-import { askQuestion, SourceCitation } from "../lib/api";
+import { askQuestionStream, SourceCitation } from "../lib/api";
 import LoadingIndicator from "./LoadingIndicator";
 import MessageBubble from "./MessageBubble";
 
@@ -12,6 +12,7 @@ interface Message {
   sources?: SourceCitation[];
   confidence?: number;
   entities?: string[];
+  streaming?: boolean;
 }
 
 interface ChatInterfaceProps {
@@ -23,6 +24,8 @@ export default function ChatInterface({ spoilerLimitArc, onPrimaryEntityChange }
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  // Ref pour accumuler les tokens sans re-render a chaque caractere
+  const streamingIndexRef = useRef<number | null>(null);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,29 +38,78 @@ export default function ChatInterface({ spoilerLimitArc, onPrimaryEntityChange }
     setQuestion("");
     setLoading(true);
 
+    // Ajouter un message assistant vide qui sera rempli par le stream
+    const assistantMessage: Message = { role: "assistant", content: "", streaming: true };
+    setMessages((current) => {
+      streamingIndexRef.current = current.length;
+      return [...current, assistantMessage];
+    });
+
     try {
-      const response = await askQuestion(userMessage.content, spoilerLimitArc);
-      setMessages((current) => [
-        ...current,
+      await askQuestionStream(
+        userMessage.content,
         {
-          role: "assistant",
-          content: response.answer,
-          sources: response.sources,
-          confidence: response.confidence,
-          entities: response.entities,
+          onMetadata: ({ sources, entities, confidence }) => {
+            setMessages((current) => {
+              const idx = streamingIndexRef.current;
+              if (idx === null) return current;
+              const updated = [...current];
+              updated[idx] = { ...updated[idx], sources, entities, confidence };
+              return updated;
+            });
+            onPrimaryEntityChange?.(entities[0] ?? null);
+          },
+          onToken: (text) => {
+            setMessages((current) => {
+              const idx = streamingIndexRef.current;
+              if (idx === null) return current;
+              const updated = [...current];
+              updated[idx] = { ...updated[idx], content: updated[idx].content + text };
+              return updated;
+            });
+          },
+          onDone: () => {
+            setMessages((current) => {
+              const idx = streamingIndexRef.current;
+              if (idx === null) return current;
+              const updated = [...current];
+              updated[idx] = { ...updated[idx], streaming: false };
+              return updated;
+            });
+            streamingIndexRef.current = null;
+            setLoading(false);
+          },
+          onError: (err) => {
+            setMessages((current) => {
+              const idx = streamingIndexRef.current;
+              if (idx === null) return current;
+              const updated = [...current];
+              updated[idx] = {
+                ...updated[idx],
+                content: `Erreur streaming: ${err.message}`,
+                streaming: false,
+              };
+              return updated;
+            });
+            streamingIndexRef.current = null;
+            setLoading(false);
+          },
         },
-      ]);
-      onPrimaryEntityChange?.(response.entities[0] ?? null);
-    } catch {
-      setMessages((current) => [
-        ...current,
-        {
-          role: "assistant",
-          content: "Erreur API. Verifie que le backend FastAPI est demarre sur http://localhost:8000.",
-        },
-      ]);
+        spoilerLimitArc,
+      );
+    } catch (err) {
+      setMessages((current) => {
+        const idx = streamingIndexRef.current;
+        const errorContent = "Erreur API. Verifie que le backend FastAPI est demarre sur http://localhost:8000.";
+        if (idx !== null) {
+          const updated = [...current];
+          updated[idx] = { ...updated[idx], content: errorContent, streaming: false };
+          return updated;
+        }
+        return [...current, { role: "assistant", content: errorContent }];
+      });
+      streamingIndexRef.current = null;
       onPrimaryEntityChange?.(null);
-    } finally {
       setLoading(false);
     }
   }
@@ -70,18 +122,19 @@ export default function ChatInterface({ spoilerLimitArc, onPrimaryEntityChange }
           <p className="text-sm text-[#c9bc9f]">Pose une question sur les personnages, arcs, fruits du demon, ou lieux.</p>
         ) : null}
         {messages.map((message, index) => (
-          <div
-            key={`${message.role}-${index}`}
-          >
+          <div key={`${message.role}-${index}`}>
             <MessageBubble
               role={message.role}
               content={message.content}
               sources={message.sources}
               confidence={message.confidence}
+              streaming={message.streaming}
             />
           </div>
         ))}
-        {loading ? <LoadingIndicator label="Recherche du contexte en cours..." /> : null}
+        {loading && streamingIndexRef.current === null ? (
+          <LoadingIndicator label="Recherche du contexte en cours..." />
+        ) : null}
       </div>
       <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row">
         <input

@@ -66,6 +66,64 @@ export async function askQuestion(question: string, spoilerLimitArc?: string): P
   return (await response.json()) as AskResponse;
 }
 
+export interface StreamCallbacks {
+  onMetadata: (meta: { sources: SourceCitation[]; entities: string[]; confidence: number }) => void;
+  onToken: (text: string) => void;
+  onDone: () => void;
+  onError: (err: Error) => void;
+}
+
+export async function askQuestionStream(
+  question: string,
+  callbacks: StreamCallbacks,
+  spoilerLimitArc?: string,
+): Promise<void> {
+  const response = await fetch(`${apiBaseUrl()}/api/ask/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      question,
+      spoiler_limit_arc: spoilerLimitArc && spoilerLimitArc !== "Aucun" ? spoilerLimitArc : null,
+    }),
+  });
+
+  if (!response.ok || !response.body) {
+    throw new Error(`Stream API error: ${response.status}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() ?? "";
+
+    for (const part of parts) {
+      const eventMatch = part.match(/^event: (\w+)\ndata: (.+)$/s);
+      if (!eventMatch) continue;
+      const [, eventName, dataRaw] = eventMatch;
+
+      try {
+        const data = JSON.parse(dataRaw) as Record<string, unknown>;
+        if (eventName === "metadata") {
+          callbacks.onMetadata(data as { sources: SourceCitation[]; entities: string[]; confidence: number });
+        } else if (eventName === "token") {
+          callbacks.onToken((data as { text: string }).text);
+        } else if (eventName === "done") {
+          callbacks.onDone();
+        }
+      } catch {
+        // Ignore les lignes malformees
+      }
+    }
+  }
+}
+
 export async function fetchEntity(name: string): Promise<EntityResponse> {
   const response = await fetch(`${apiBaseUrl()}/api/entity/${encodeURIComponent(name)}`);
   if (!response.ok) {

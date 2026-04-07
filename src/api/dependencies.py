@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Generator
 from functools import lru_cache
 
 from src.api.models import AskResponse, SourceCitation
@@ -108,6 +109,50 @@ class RAGService:
             entities=entities,
             confidence=confidence,
         )
+
+    def ask_stream(self, question: str, spoiler_limit_arc: str | None = None) -> Generator[str, None, None]:
+        """Execute le pipeline RAG et yield des evenements SSE.
+
+        Format SSE emis:
+            event: metadata\\ndata: {sources, entities, confidence}\\n\\n
+            event: token\\ndata: {text: "..."}\\n\\n   (repete)
+            event: done\\ndata: {}\\n\\n
+        """
+        retriever = self._get_retriever()
+        entities = self.entity_extractor.extract(question)
+        retrieval_results = retriever.retrieve(
+            question=question,
+            entities=entities,
+            top_k=max(self.settings.retrieval_top_k * 3, self.settings.retrieval_top_k),
+        )
+        reranked = self.reranker.rerank(retrieval_results)
+        top_results = reranked[: self.settings.retrieval_top_k]
+
+        graph_rows: list[dict[str, str]] = []
+        for entity in entities:
+            graph_rows.extend(self.graph_retriever.fetch_relations(entity, limit=20))
+
+        context = self.prompt_builder.build_context(top_results, top_k=self.settings.retrieval_top_k)
+        graph_context = self.prompt_builder.build_graph_context(graph_rows)
+
+        _ = spoiler_limit_arc
+
+        confidence = 0.0
+        if top_results:
+            confidence = sum(row.final_score for row in top_results) / len(top_results)
+            confidence = max(0.0, min(1.0, confidence))
+
+        sources = [
+            {"entity_name": r.entity_name, "section": r.section, "source_url": r.source_url, "score": r.final_score}
+            for r in top_results
+        ]
+        metadata_payload = json.dumps({"sources": sources, "entities": entities, "confidence": confidence})
+        yield f"event: metadata\ndata: {metadata_payload}\n\n"
+
+        for token in self.generator.generate_answer_stream(question, context, graph_context):
+            yield f"event: token\ndata: {json.dumps({'text': token})}\n\n"
+
+        yield "event: done\ndata: {}\n\n"
 
     def get_entity(self, entity_name: str) -> dict | None:
         """Retourne la fiche entite depuis data/raw et le graphe."""
