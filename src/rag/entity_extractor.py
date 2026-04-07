@@ -33,6 +33,11 @@ class EntityExtractor:
             if words:
                 alias_map[words[-1]] = entity
 
+            # Alias court utile pour les questions naturelles (ex: "Law", "Zoro").
+            all_words = [word for word in normalized.split(" ") if word]
+            if all_words and len(all_words[-1]) >= 3:
+                alias_map[all_words[-1]] = entity
+
             compact = normalized.replace(" ", "")
             if len(compact) >= 6:
                 alias_map[compact] = entity
