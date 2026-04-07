@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 
 from src.config.settings import get_settings
-from src.processing.graph_builder import GraphBuilder
+from src.processing.graph_builder import GraphBuilder, GraphTriplet
 from src.scraper.exporter import JsonExporter
 from src.utils.logger import configure_logging, get_logger
 
@@ -13,7 +13,12 @@ from src.utils.logger import configure_logging, get_logger
 def main() -> None:
     """Point d'entree CLI du build de graphe."""
     parser = argparse.ArgumentParser(description="Build Neo4j graph from scraped documents")
-    parser.parse_args()
+    parser.add_argument(
+        "--export-only",
+        action="store_true",
+        help="Exporte les triplets sans ecriture Neo4j",
+    )
+    args = parser.parse_args()
 
     settings = get_settings()
     configure_logging(settings.log_level)
@@ -30,6 +35,17 @@ def main() -> None:
         return
 
     builder = GraphBuilder(settings)
+    all_triplets: list[GraphTriplet] = []
+    for document in documents:
+        all_triplets.extend(builder.extract_triplets(document))
+
+    triplets_path = settings.graph_data_dir / "triplets.jsonl"
+    builder.export_triplets_jsonl(all_triplets, triplets_path)
+    logger.info("Triplets exportes: %s (%s lignes)", triplets_path, len(all_triplets))
+
+    if args.export_only:
+        return
+
     try:
         extracted_triplets, inserted_relations = builder.build_from_documents(documents)
         counts = builder.get_counts()

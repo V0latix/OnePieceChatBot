@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from neo4j import GraphDatabase
@@ -180,6 +182,22 @@ class GraphBuilder:
                 inserted_relations += 1
 
         return extracted_triplets, inserted_relations
+
+    def export_triplets_jsonl(self, triplets: list[GraphTriplet], output_path: Path) -> None:
+        """Exporte les triplets en JSONL pour audit et debug."""
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with output_path.open("w", encoding="utf-8") as handle:
+            for triplet in triplets:
+                payload = {
+                    "subject": triplet.subject,
+                    "relation": triplet.relation,
+                    "object": triplet.object,
+                    "subject_type": triplet.subject_type,
+                    "object_type": triplet.object_type,
+                    "properties": triplet.properties,
+                }
+                handle.write(json.dumps(payload, ensure_ascii=False))
+                handle.write("\n")
 
     def get_counts(self) -> dict[str, int]:
         """Retourne les cardinalites principales du graphe."""
