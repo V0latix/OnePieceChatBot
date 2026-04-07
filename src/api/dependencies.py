@@ -32,17 +32,13 @@ class RAGService:
         self.logger = get_logger(__name__)
 
         self.entity_extractor = EntityExtractor.from_raw_documents(settings.raw_data_dir)
-        self.embedder = EmbeddingGenerator(settings.embedding_model)
         self.vector_store = (
             SupabaseVectorStore(settings.supabase_url, settings.supabase_key)
             if settings.supabase_url and settings.supabase_key
             else None
         )
-        self.retriever = HybridRetriever(
-            settings=settings,
-            embedder=self.embedder,
-            vector_store=self.vector_store,
-        )
+        self._embedder: EmbeddingGenerator | None = None
+        self._retriever: HybridRetriever | None = None
         self.reranker = WeightedReranker()
         self.prompt_builder = PromptBuilder()
         self.generator = AnswerGenerator(settings, self.prompt_builder)
@@ -62,10 +58,22 @@ class RAGService:
             for result in results
         ]
 
+    def _get_retriever(self) -> HybridRetriever:
+        """Initialise le retriever a la demande pour eviter un cold-start lourd."""
+        if self._retriever is None:
+            self._embedder = EmbeddingGenerator(self.settings.embedding_model)
+            self._retriever = HybridRetriever(
+                settings=self.settings,
+                embedder=self._embedder,
+                vector_store=self.vector_store,
+            )
+        return self._retriever
+
     def ask(self, question: str, spoiler_limit_arc: str | None = None) -> AskResponse:
         """Execute une requete RAG complete."""
+        retriever = self._get_retriever()
         entities = self.entity_extractor.extract(question)
-        retrieval_results = self.retriever.retrieve(
+        retrieval_results = retriever.retrieve(
             question=question,
             entities=entities,
             top_k=max(self.settings.retrieval_top_k * 3, self.settings.retrieval_top_k),
@@ -133,7 +141,8 @@ class RAGService:
 
     def search(self, query: str, entity_type: str | None = None) -> list[RetrievalResult]:
         """Expose la recherche hybride brute pour /api/search."""
-        results = self.retriever.retrieve(
+        retriever = self._get_retriever()
+        results = retriever.retrieve(
             question=query,
             entities=self.entity_extractor.extract(query),
             filter_type=entity_type,
@@ -144,7 +153,11 @@ class RAGService:
 
     def health(self) -> dict[str, int | str]:
         """Retourne l'etat de sante applicatif."""
-        chunks_count = len(self.retriever.local_index)
+        chunks_count = 0
+        chunks_path = self.settings.chunk_data_dir / "chunks_with_embeddings.jsonl"
+        if chunks_path.exists():
+            with chunks_path.open("r", encoding="utf-8") as handle:
+                chunks_count = sum(1 for _ in handle)
         graph_nodes = 0
 
         if self.settings.neo4j_uri and self.settings.neo4j_user and self.settings.neo4j_password:
@@ -168,3 +181,30 @@ def get_rag_service() -> RAGService:
     """Retourne un singleton de service RAG."""
     settings = get_settings()
     return RAGService(settings)
+
+
+def get_health_snapshot(settings: Settings | None = None) -> dict[str, int | str]:
+    """Construit un etat de sante sans initialiser le pipeline RAG complet."""
+    settings = settings or get_settings()
+
+    chunks_count = 0
+    chunks_path = settings.chunk_data_dir / "chunks_with_embeddings.jsonl"
+    if chunks_path.exists():
+        with chunks_path.open("r", encoding="utf-8") as handle:
+            chunks_count = sum(1 for _ in handle)
+
+    graph_nodes = 0
+    if settings.neo4j_uri and settings.neo4j_user and settings.neo4j_password:
+        builder = GraphBuilder(settings)
+        try:
+            graph_nodes = builder.get_counts()["nodes"]
+        except Exception:
+            graph_nodes = 0
+        finally:
+            builder.close()
+
+    return {
+        "status": "ok",
+        "chunks_count": chunks_count,
+        "graph_nodes": graph_nodes,
+    }
