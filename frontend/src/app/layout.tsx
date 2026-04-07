@@ -1,26 +1,15 @@
 import type { Metadata } from "next";
-import { Bebas_Neue, Lora } from "next/font/google";
+import type { ReactNode } from "react";
 import "./globals.css";
-
-const display = Bebas_Neue({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-display",
-});
-
-const body = Lora({
-  subsets: ["latin"],
-  variable: "--font-body",
-});
 
 export const metadata: Metadata = {
   title: "One Piece RAG",
   description: "Assistant encyclopedique One Piece avec citations",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="fr" className={`${display.variable} ${body.variable}`}>
+    <html lang="fr">
       <body className="min-h-screen antialiased [font-family:var(--font-body)]">{children}</body>
     </html>
   );

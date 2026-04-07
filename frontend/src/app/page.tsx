@@ -1,40 +1,78 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import ChatInterface from "../components/ChatInterface";
 import EntityCard from "../components/EntityCard";
 import GraphViewer from "../components/GraphViewer";
 import SpoilerFilter from "../components/SpoilerFilter";
+import { EntityResponse, fetchEntity, fetchGraph, GraphResponse } from "../lib/api";
 
 export default function HomePage() {
   const [spoilerLimit, setSpoilerLimit] = useState("Aucun");
+  const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
+  const [entity, setEntity] = useState<EntityResponse | null>(null);
+  const [graph, setGraph] = useState<GraphResponse | null>(null);
+  const [entityLoading, setEntityLoading] = useState(false);
+  const [graphLoading, setGraphLoading] = useState(false);
+  const [entityError, setEntityError] = useState<string | null>(null);
+  const [graphError, setGraphError] = useState<string | null>(null);
 
-  const demoFacts = useMemo(
-    () => [
-      "Prime: 3,000,000,000 Berries",
-      "Fruit: Hito Hito no Mi, Model: Nika",
-      "Affiliation: Straw Hat Pirates",
-    ],
-    [],
-  );
+  useEffect(() => {
+    if (!selectedEntity) {
+      setEntity(null);
+      setGraph(null);
+      setEntityError(null);
+      setGraphError(null);
+      return;
+    }
 
-  const demoNodes = useMemo(
-    () => [
-      { id: "luffy", label: "Monkey D. Luffy" },
-      { id: "crew", label: "Straw Hat Pirates" },
-      { id: "fruit", label: "Hito Hito no Mi, Model: Nika" },
-    ],
-    [],
-  );
+    let cancelled = false;
+    setEntityLoading(true);
+    setGraphLoading(true);
+    setEntityError(null);
+    setGraphError(null);
 
-  const demoEdges = useMemo(
-    () => [
-      { source: "Monkey D. Luffy", target: "Straw Hat Pirates", type: "MEMBER_OF" },
-      { source: "Monkey D. Luffy", target: "Hito Hito no Mi, Model: Nika", type: "ATE" },
-    ],
-    [],
-  );
+    fetchEntity(selectedEntity)
+      .then((payload) => {
+        if (!cancelled) {
+          setEntity(payload);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setEntity(null);
+          setEntityError("Impossible de charger la fiche entite.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setEntityLoading(false);
+        }
+      });
+
+    fetchGraph(selectedEntity, 2)
+      .then((payload) => {
+        if (!cancelled) {
+          setGraph(payload);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setGraph(null);
+          setGraphError("Impossible de charger le sous-graphe.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setGraphLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedEntity]);
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-6 md:gap-6 md:px-8 md:py-10">
@@ -48,14 +86,14 @@ export default function HomePage() {
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[1.7fr_1fr]">
-        <ChatInterface />
+        <ChatInterface spoilerLimitArc={spoilerLimit} onPrimaryEntityChange={setSelectedEntity} />
         <div className="space-y-5">
           <SpoilerFilter value={spoilerLimit} onChange={setSpoilerLimit} />
-          <EntityCard name="Monkey D. Luffy" type="character" facts={demoFacts} />
+          <EntityCard entity={entity} loading={entityLoading} error={entityError} />
         </div>
       </div>
 
-      <GraphViewer nodes={demoNodes} edges={demoEdges} />
+      <GraphViewer graph={graph} loading={graphLoading} error={graphError} />
     </main>
   );
 }

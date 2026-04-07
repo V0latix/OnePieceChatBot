@@ -10,6 +10,8 @@
   --accent-soft: #e7b24a;
   --text-main: #f4e8cc;
   --text-muted: #c9bc9f;
+  --font-display: "Baskerville", "Palatino Linotype", "Book Antiqua", "Times New Roman", serif;
+  --font-body: "Garamond", "Palatino", "Book Antiqua", "Times New Roman", serif;
 }
 
 * {

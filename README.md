@@ -50,8 +50,16 @@ python scripts/05_test_rag.py --question "Quel est le fruit du demon de Trafalga
 uvicorn src.api.main:app --reload
 ```
 
+6. Frontend (dans un second terminal)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
 ## Tests
 
 ```bash
-pytest -q
+.venv/bin/python -m pytest -q
 ```

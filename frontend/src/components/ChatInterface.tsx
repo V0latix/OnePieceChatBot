@@ -2,14 +2,24 @@
 
 import { FormEvent, useState } from "react";
 
-import { askQuestion } from "../lib/api";
+import { askQuestion, SourceCitation } from "../lib/api";
+import LoadingIndicator from "./LoadingIndicator";
+import MessageBubble from "./MessageBubble";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  sources?: SourceCitation[];
+  confidence?: number;
+  entities?: string[];
 }
 
-export default function ChatInterface() {
+interface ChatInterfaceProps {
+  spoilerLimitArc?: string;
+  onPrimaryEntityChange?: (entityName: string | null) => void;
+}
+
+export default function ChatInterface({ spoilerLimitArc, onPrimaryEntityChange }: ChatInterfaceProps) {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -26,8 +36,18 @@ export default function ChatInterface() {
     setLoading(true);
 
     try {
-      const response = await askQuestion(userMessage.content);
-      setMessages((current) => [...current, { role: "assistant", content: response.answer }]);
+      const response = await askQuestion(userMessage.content, spoilerLimitArc);
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content: response.answer,
+          sources: response.sources,
+          confidence: response.confidence,
+          entities: response.entities,
+        },
+      ]);
+      onPrimaryEntityChange?.(response.entities[0] ?? null);
     } catch {
       setMessages((current) => [
         ...current,
@@ -36,6 +56,7 @@ export default function ChatInterface() {
           content: "Erreur API. Verifie que le backend FastAPI est demarre sur http://localhost:8000.",
         },
       ]);
+      onPrimaryEntityChange?.(null);
     } finally {
       setLoading(false);
     }
@@ -49,18 +70,18 @@ export default function ChatInterface() {
           <p className="text-sm text-[#c9bc9f]">Pose une question sur les personnages, arcs, fruits du demon, ou lieux.</p>
         ) : null}
         {messages.map((message, index) => (
-          <article
+          <div
             key={`${message.role}-${index}`}
-            className={`rounded-xl border px-4 py-3 text-sm leading-relaxed ${
-              message.role === "user"
-                ? "ml-auto max-w-[85%] border-ember bg-[#2b1f1a]"
-                : "mr-auto max-w-[85%] border-gold/40 bg-[#131f33]"
-            }`}
           >
-            {message.content}
-          </article>
+            <MessageBubble
+              role={message.role}
+              content={message.content}
+              sources={message.sources}
+              confidence={message.confidence}
+            />
+          </div>
         ))}
-        {loading ? <p className="text-sm text-gold">Recherche du contexte en cours...</p> : null}
+        {loading ? <LoadingIndicator label="Recherche du contexte en cours..." /> : null}
       </div>
       <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row">
         <input
@@ -77,6 +98,9 @@ export default function ChatInterface() {
           Envoyer
         </button>
       </form>
+      {spoilerLimitArc && spoilerLimitArc !== "Aucun" ? (
+        <p className="mt-3 text-xs text-[#bdaa82]">Filtre spoiler actif: {spoilerLimitArc}</p>
+      ) : null}
     </section>
   );
 }
