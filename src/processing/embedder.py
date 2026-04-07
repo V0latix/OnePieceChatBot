@@ -14,7 +14,14 @@ class EmbeddingGenerator:
 
     def __init__(self, model_name: str) -> None:
         self.model_name = model_name
-        self.model = SentenceTransformer(model_name)
+        self.model = self._load_model(model_name)
+
+    def _load_model(self, model_name: str) -> SentenceTransformer:
+        """Charge le modele, puis bascule en local-only si le reseau est indisponible."""
+        try:
+            return SentenceTransformer(model_name)
+        except Exception:
+            return SentenceTransformer(model_name, local_files_only=True)
 
     def embed_texts(self, texts: Iterable[str], is_query: bool = False) -> list[list[float]]:
         """Encode une collection de textes en vecteurs normalises."""

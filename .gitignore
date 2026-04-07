@@ -16,3 +16,13 @@ node_modules/
 .next/
 frontend/.next/
 frontend/node_modules/
+
+# Artefacts generes par le pipeline
+data/raw/*
+data/processed/*
+data/chunks/*
+data/graph/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/chunks/.gitkeep
+!data/graph/.gitkeep

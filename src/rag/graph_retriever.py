@@ -54,7 +54,7 @@ class GraphRetriever:
             with self._driver.session() as session:
                 rows = session.run(query, {"name": entity_name, "limit": limit})
                 return [dict(record) for record in rows]
-        except Neo4jError:
+        except (Neo4jError, Exception):
             return []
 
     def fetch_subgraph(self, entity_name: str, depth: int = 2, limit: int = 100) -> dict[str, list[dict[str, Any]]]:
@@ -98,7 +98,7 @@ class GraphRetriever:
                             "target": end,
                             "type": rel_type,
                         }
-        except Neo4jError:
+        except (Neo4jError, Exception):
             return {"nodes": [], "edges": []}
 
         return {

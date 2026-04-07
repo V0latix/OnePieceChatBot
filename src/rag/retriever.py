@@ -132,11 +132,14 @@ class HybridRetriever:
         if self.vector_store is None:
             return []
 
-        rows = self.vector_store.search(
-            query_embedding=query_embedding,
-            match_count=top_k,
-            filter_type=filter_type,
-        )
+        try:
+            rows = self.vector_store.search(
+                query_embedding=query_embedding,
+                match_count=top_k,
+                filter_type=filter_type,
+            )
+        except Exception:
+            return []
 
         return [
             RetrievalResult(

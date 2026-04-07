@@ -19,6 +19,8 @@ def load_documents(raw_dir: Path) -> list:
     exporter = JsonExporter(raw_dir)
     documents = []
     for file_path in sorted(raw_dir.glob("*.json")):
+        if file_path.name == "scrape_state.json":
+            continue
         documents.append(exporter.load(file_path))
     return documents
 

@@ -44,6 +44,19 @@ class AnswerGenerator:
         payload = response.json()
         return payload.get("message", {}).get("content", "")
 
+    def _fallback_from_context(self, context: str) -> str:
+        """Retourne une reponse minimale quand aucun LLM n'est joignable."""
+        stripped = context.strip()
+        if not stripped:
+            return "Je n'ai pas trouve cette information dans ma base de donnees."
+
+        first_block = stripped.split("\n\n", maxsplit=1)[0]
+        snippet = first_block[:700].strip()
+        return (
+            "Je n'ai pas pu joindre le LLM (Groq/Ollama). Voici le meilleur contexte retrouve:\n\n"
+            f"{snippet}"
+        )
+
     def generate_answer(self, question: str, context: str, graph_context: str) -> str:
         """Genere la reponse finale en essayant Groq puis Ollama."""
         messages = self.prompt_builder.build_messages(question, context, graph_context)
@@ -51,4 +64,7 @@ class AnswerGenerator:
         try:
             return self._generate_with_groq(messages)
         except Exception:
-            return self._generate_with_ollama(messages)
+            try:
+                return self._generate_with_ollama(messages)
+            except Exception:
+                return self._fallback_from_context(context)

@@ -29,7 +29,11 @@ def main() -> None:
         return
 
     exporter = JsonExporter(settings.raw_data_dir)
-    documents = [exporter.load(path) for path in sorted(settings.raw_data_dir.glob("*.json"))]
+    documents = [
+        exporter.load(path)
+        for path in sorted(settings.raw_data_dir.glob("*.json"))
+        if path.name != "scrape_state.json"
+    ]
     if not documents:
         logger.warning("Aucun document source dans data/raw")
         return
