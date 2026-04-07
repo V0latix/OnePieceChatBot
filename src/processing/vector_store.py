@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict
 from supabase import Client, create_client
 
 from src.processing.chunker import ChunkRecord
+from src.utils.circuit_breaker import CircuitBreaker, CircuitBreakerOpen
 
 
 class VectorSearchResult(BaseModel):
@@ -28,6 +29,7 @@ class SupabaseVectorStore:
 
     def __init__(self, supabase_url: str, supabase_key: str) -> None:
         self.client: Client = create_client(supabase_url, supabase_key)
+        self._cb = CircuitBreaker("supabase", failure_threshold=3, recovery_timeout=60.0)
 
     def upsert_chunks(self, chunks: list[ChunkRecord], embeddings: list[list[float]]) -> None:
         """Upsert batch des chunks et embeddings."""
@@ -52,7 +54,15 @@ class SupabaseVectorStore:
                 }
             )
 
-        self.client.table("op_chunks").upsert(payload, on_conflict="id").execute()
+        self._cb.before_call()
+        try:
+            self.client.table("op_chunks").upsert(payload, on_conflict="id").execute()
+            self._cb.on_success()
+        except CircuitBreakerOpen:
+            raise
+        except Exception as exc:
+            self._cb.on_failure()
+            raise exc
 
     def search(
         self,
@@ -60,15 +70,25 @@ class SupabaseVectorStore:
         match_count: int = 5,
         filter_type: str | None = None,
     ) -> list[VectorSearchResult]:
-        """Interroge la fonction SQL `search_chunks`."""
-        response = self.client.rpc(
-            "search_chunks",
-            {
-                "query_embedding": query_embedding,
-                "match_count": match_count,
-                "filter_type": filter_type,
-            },
-        ).execute()
+        """Interroge la fonction SQL `search_chunks`. Retourne [] si circuit ouvert."""
+        try:
+            self._cb.before_call()
+        except CircuitBreakerOpen:
+            return []
 
-        data = response.data or []
-        return [VectorSearchResult.model_validate(row) for row in data]
+        try:
+            response = self.client.rpc(
+                "search_chunks",
+                {
+                    "query_embedding": query_embedding,
+                    "match_count": match_count,
+                    "filter_type": filter_type,
+                },
+            ).execute()
+            data = response.data or []
+            result = [VectorSearchResult.model_validate(row) for row in data]
+            self._cb.on_success()
+            return result
+        except Exception:
+            self._cb.on_failure()
+            return []

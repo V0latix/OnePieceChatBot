@@ -8,6 +8,11 @@ from neo4j import GraphDatabase
 from neo4j.exceptions import Neo4jError
 
 from src.config.settings import Settings
+from src.utils.circuit_breaker import CircuitBreaker, CircuitBreakerOpen
+
+# Timeouts Neo4j (secondes)
+_NEO4J_CONNECTION_TIMEOUT = 10
+_NEO4J_QUERY_TIMEOUT = 15_000  # ms, utilise par le driver
 
 
 class GraphRetriever:
@@ -16,6 +21,7 @@ class GraphRetriever:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self._driver = None
+        self._cb = CircuitBreaker("neo4j", failure_threshold=3, recovery_timeout=120.0)
 
     def connect(self) -> bool:
         """Etablit la connexion si possible, sinon retourne False."""
@@ -23,10 +29,20 @@ class GraphRetriever:
             return True
         if not (self.settings.neo4j_uri and self.settings.neo4j_user and self.settings.neo4j_password):
             return False
-        self._driver = GraphDatabase.driver(
-            self.settings.neo4j_uri,
-            auth=(self.settings.neo4j_user, self.settings.neo4j_password),
-        )
+        try:
+            self._cb.before_call()
+            self._driver = GraphDatabase.driver(
+                self.settings.neo4j_uri,
+                auth=(self.settings.neo4j_user, self.settings.neo4j_password),
+                connection_timeout=_NEO4J_CONNECTION_TIMEOUT,
+                max_transaction_retry_time=_NEO4J_QUERY_TIMEOUT / 1000,
+            )
+            self._cb.on_success()
+        except CircuitBreakerOpen:
+            return False
+        except Exception:
+            self._cb.on_failure()
+            return False
         return True
 
     def close(self) -> None:
@@ -51,10 +67,17 @@ class GraphRetriever:
         """
 
         try:
+            self._cb.before_call()
             with self._driver.session() as session:
                 rows = session.run(query, {"name": entity_name, "limit": limit})
-                return [dict(record) for record in rows]
+                result = [dict(record) for record in rows]
+            self._cb.on_success()
+            return result
+        except CircuitBreakerOpen:
+            return []
         except (Neo4jError, Exception):
+            self._cb.on_failure()
+            self._driver = None  # Force reconnexion au prochain appel
             return []
 
     def fetch_subgraph(self, entity_name: str, depth: int = 2, limit: int = 100) -> dict[str, list[dict[str, Any]]]:
@@ -74,6 +97,7 @@ class GraphRetriever:
         edges: dict[tuple[str, str, str], dict[str, Any]] = {}
 
         try:
+            self._cb.before_call()
             with self._driver.session() as session:
                 rows = session.run(query, {"name": entity_name, "limit": limit})
                 for row in rows:
@@ -98,7 +122,12 @@ class GraphRetriever:
                             "target": end,
                             "type": rel_type,
                         }
+            self._cb.on_success()
+        except CircuitBreakerOpen:
+            return {"nodes": [], "edges": []}
         except (Neo4jError, Exception):
+            self._cb.on_failure()
+            self._driver = None
             return {"nodes": [], "edges": []}
 
         return {
