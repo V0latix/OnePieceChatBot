@@ -47,6 +47,18 @@ class FandomSpider:
         self.logger = get_logger(__name__)
         self._state_path: Path = settings.scrape_state_path
         self._state = self._load_state()
+        self._client = httpx.Client(
+            headers={
+                "User-Agent": "OnePieceRAGBot/0.1 (+https://github.com/V0latix/OnePieceChatBot)",
+                "Accept": "application/json",
+            },
+            timeout=30.0,
+            follow_redirects=True,
+        )
+
+    def close(self) -> None:
+        """Ferme le client HTTP sous-jacent."""
+        self._client.close()
 
     def _load_state(self) -> ScrapeState:
         """Charge l'etat depuis disque si present."""
@@ -99,11 +111,9 @@ class FandomSpider:
             time.sleep(delay)
 
             try:
-                response = httpx.get(
+                response = self._client.get(
                     str(self.settings.fandom_api_base),
                     params=params,
-                    timeout=30.0,
-                    follow_redirects=True,
                 )
                 if response.status_code in RETRYABLE_STATUS_CODES:
                     raise httpx.HTTPStatusError(

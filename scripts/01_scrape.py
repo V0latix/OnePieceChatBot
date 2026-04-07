@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from collections import OrderedDict
 
 from src.config.settings import get_settings
@@ -25,6 +26,11 @@ SEED_CATEGORIES = [
     "Category:Races",
     "Category:Events",
 ]
+
+
+def slugify_title(title: str) -> str:
+    """Normalise un titre wiki vers un id fichier local."""
+    return re.sub(r"[^a-zA-Z0-9]+", "_", title.strip().lower()).strip("_")
 
 
 def collect_seed_titles(spider: FandomSpider, max_pages: int) -> list[str]:
@@ -62,6 +68,7 @@ def main() -> None:
     cleaner = WikitextCleaner()
     categorizer = PageCategorizer()
     exporter = JsonExporter(settings.raw_data_dir)
+    existing_ids = {path.stem for path in settings.raw_data_dir.glob("*.json")}
 
     titles = collect_seed_titles(spider, max_pages=args.max_pages)
     logger.info("Demarrage scraping subset: %s pages candidates", len(titles))
@@ -69,40 +76,49 @@ def main() -> None:
     success = 0
     failed = 0
 
-    for index, title in enumerate(titles, start=1):
-        logger.info("[%s/%s] Scraping %s", index, len(titles), title)
-        try:
-            raw_page = spider.scrape_page(title)
-            cleaned = cleaner.clean_page(
-                title=raw_page.title,
-                url=raw_page.url,
-                categories=raw_page.categories,
-                wikitext=raw_page.wikitext,
-            )
-            entity_type = categorizer.detect_entity_type(
-                title=cleaned.title,
-                categories=cleaned.categories,
-                infobox=cleaned.infobox,
-            )
-            document = ScrapedPageDocument(
-                id=cleaned.id,
-                title=cleaned.title,
-                url=cleaned.url,
-                type=entity_type,
-                categories=cleaned.categories,
-                infobox=cleaned.infobox,
-                sections=cleaned.sections,
-                related_entities=cleaned.related_entities,
-                last_scraped=cleaned.last_scraped.isoformat(),
-            )
-            output_path = exporter.export(document)
-            spider.mark_completed(title)
-            success += 1
-            logger.info("OK %s -> %s", title, output_path)
-        except Exception as exc:  # pylint: disable=broad-except
-            failed += 1
-            spider.mark_failed(title)
-            logger.error("ECHEC %s: %s", title, exc)
+    try:
+        for index, title in enumerate(titles, start=1):
+            logger.info("[%s/%s] Scraping %s", index, len(titles), title)
+            try:
+                if slugify_title(title) in existing_ids:
+                    spider.mark_completed(title)
+                    logger.info("SKIP %s (fichier deja present)", title)
+                    continue
+
+                raw_page = spider.scrape_page(title)
+                cleaned = cleaner.clean_page(
+                    title=raw_page.title,
+                    url=raw_page.url,
+                    categories=raw_page.categories,
+                    wikitext=raw_page.wikitext,
+                )
+                entity_type = categorizer.detect_entity_type(
+                    title=cleaned.title,
+                    categories=cleaned.categories,
+                    infobox=cleaned.infobox,
+                )
+                document = ScrapedPageDocument(
+                    id=cleaned.id,
+                    title=cleaned.title,
+                    url=cleaned.url,
+                    type=entity_type,
+                    categories=cleaned.categories,
+                    infobox=cleaned.infobox,
+                    sections=cleaned.sections,
+                    related_entities=cleaned.related_entities,
+                    last_scraped=cleaned.last_scraped.isoformat(),
+                )
+                output_path = exporter.export(document)
+                existing_ids.add(cleaned.id)
+                spider.mark_completed(title)
+                success += 1
+                logger.info("OK %s -> %s", title, output_path)
+            except Exception as exc:  # pylint: disable=broad-except
+                failed += 1
+                spider.mark_failed(title)
+                logger.error("ECHEC %s: %s", title, exc)
+    finally:
+        spider.close()
 
     logger.info("Termine. success=%s failed=%s", success, failed)
 
