@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -40,7 +41,7 @@ class DocumentChunker:
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self._tokenizer = tiktoken.get_encoding("cl100k_base")
+        self._tokenizer = self._init_tokenizer()
         self._splitter = RecursiveCharacterTextSplitter(
             chunk_size=settings.chunk_size,
             chunk_overlap=settings.chunk_overlap,
@@ -48,9 +49,20 @@ class DocumentChunker:
             separators=["\n\n", "\n", ". ", " ", ""],
         )
 
+    def _init_tokenizer(self) -> tiktoken.Encoding | None:
+        """Initialise le tokenizer tiktoken, avec fallback offline si indisponible."""
+        try:
+            return tiktoken.get_encoding("cl100k_base")
+        except Exception:
+            return None
+
     def count_tokens(self, text: str) -> int:
-        """Retourne le nombre de tokens approx via cl100k_base."""
-        return len(self._tokenizer.encode(text))
+        """Retourne un nombre de tokens, en mode offline si tiktoken est indisponible."""
+        if self._tokenizer is not None:
+            return len(self._tokenizer.encode(text))
+
+        # Fallback deterministic offline pour eviter les dependances reseau en test/CI.
+        return max(1, len(re.findall(r"\w+|[^\w\s]", text)))
 
     def _normalize_section_key(self, key: str) -> str:
         normalized = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in key.lower())
@@ -74,9 +86,7 @@ class DocumentChunker:
         """Decoupe un document en chunks avec metadonnees completes."""
         chunks: list[ChunkRecord] = []
 
-        section_index = 0
         for section, section_text in self._flatten_sections(document.sections):
-            section_index += 1
             normalized_section = self._normalize_section_key(section)
             section_chunks = self._splitter.split_text(section_text)
 
