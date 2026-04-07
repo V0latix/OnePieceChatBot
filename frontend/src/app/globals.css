@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-1: #08101d;
+  --bg-2: #15263f;
+  --bg-3: #311f17;
+  --accent: #d94f2b;
+  --accent-soft: #e7b24a;
+  --text-main: #f4e8cc;
+  --text-muted: #c9bc9f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at 12% 20%, rgba(217, 79, 43, 0.28), transparent 36%),
+    radial-gradient(circle at 88% 10%, rgba(231, 178, 74, 0.2), transparent 32%),
+    linear-gradient(150deg, var(--bg-1), var(--bg-2) 55%, var(--bg-3));
+}
+
+.card {
+  background: rgba(10, 21, 38, 0.72);
+  border: 1px solid rgba(231, 178, 74, 0.2);
+  box-shadow: 0 10px 40px rgba(231, 178, 74, 0.12);
+  backdrop-filter: blur(7px);
+}
+
+.fade-in {
+  animation: fadeIn 0.6s ease both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

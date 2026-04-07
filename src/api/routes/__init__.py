@@ -1,0 +1,1 @@
+"""Collection de routeurs FastAPI."""
