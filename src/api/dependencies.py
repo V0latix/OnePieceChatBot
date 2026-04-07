@@ -40,7 +40,11 @@ class RAGService:
         )
         self._embedder: EmbeddingGenerator | None = None
         self._retriever: HybridRetriever | None = None
-        self.reranker = WeightedReranker()
+        self.reranker = WeightedReranker(
+            vector_weight=settings.rerank_vector_weight,
+            graph_weight=settings.rerank_graph_weight,
+            keyword_weight=settings.rerank_keyword_weight,
+        )
         self.prompt_builder = PromptBuilder()
         self.generator = AnswerGenerator(settings, self.prompt_builder)
         self.graph_retriever = GraphRetriever(settings)

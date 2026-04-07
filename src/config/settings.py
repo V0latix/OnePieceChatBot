@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     chunk_overlap: int = Field(default=50, alias="CHUNK_OVERLAP")
     retrieval_top_k: int = Field(default=5, alias="RETRIEVAL_TOP_K")
 
+    rerank_vector_weight: float = Field(default=0.4, alias="RERANK_VECTOR_WEIGHT")
+    rerank_graph_weight: float = Field(default=0.4, alias="RERANK_GRAPH_WEIGHT")
+    rerank_keyword_weight: float = Field(default=0.2, alias="RERANK_KEYWORD_WEIGHT")
+
     data_dir: Path = Path("data")
     raw_data_dir: Path = Path("data/raw")
     processed_data_dir: Path = Path("data/processed")
@@ -62,6 +66,9 @@ class Settings(BaseSettings):
             raise ValueError("Le delai max doit etre >= au delai min")
         if self.scrape_max_retries < 1:
             raise ValueError("Le nombre de retries doit etre >= 1")
+        total = self.rerank_vector_weight + self.rerank_graph_weight + self.rerank_keyword_weight
+        if abs(total - 1.0) > 1e-6:
+            raise ValueError(f"RERANK_*_WEIGHT doivent sommer a 1.0 (actuel: {total:.4f})")
         return self
 
     def ensure_directories(self) -> None:
