@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict
 
 from src.config.settings import Settings
 from src.processing.embedder import EmbeddingGenerator
-from src.processing.vector_store import SupabaseVectorStore
+from src.processing.vector_store import QdrantVectorStore
 
 
 _WORD_RE = re.compile(r"[a-zA-Z0-9']+")
@@ -59,7 +59,7 @@ class HybridRetriever:
         self,
         settings: Settings,
         embedder: EmbeddingGenerator,
-        vector_store: SupabaseVectorStore | None = None,
+        vector_store: QdrantVectorStore | None = None,
         local_embeddings_path: Path | None = None,
     ) -> None:
         self.settings = settings

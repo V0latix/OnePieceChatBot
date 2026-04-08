@@ -22,8 +22,9 @@ class Settings(BaseSettings):
     scrape_request_delay_max: float = 2.0
     scrape_max_retries: int = 5
 
-    supabase_url: str | None = Field(default=None, alias="SUPABASE_URL")
-    supabase_key: str | None = Field(default=None, alias="SUPABASE_KEY")
+    qdrant_url: str | None = Field(default=None, alias="QDRANT_URL")
+    qdrant_api_key: str | None = Field(default=None, alias="QDRANT_API_KEY")
+    qdrant_collection: str = Field(default="op_chunks", alias="QDRANT_COLLECTION")
 
     neo4j_uri: str | None = Field(default=None, alias="NEO4J_URI")
     neo4j_user: str | None = Field(default=None, alias="NEO4J_USER")

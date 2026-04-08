@@ -11,7 +11,7 @@ from src.api.models import AskResponse, SourceCitation
 from src.config.settings import Settings, get_settings
 from src.processing.embedder import EmbeddingGenerator
 from src.processing.graph_builder import GraphBuilder
-from src.processing.vector_store import SupabaseVectorStore
+from src.processing.vector_store import QdrantVectorStore
 from src.rag.entity_extractor import EntityExtractor
 from src.rag.generator import AnswerGenerator
 from src.rag.graph_retriever import GraphRetriever
@@ -34,8 +34,8 @@ class RAGService:
 
         self.entity_extractor = EntityExtractor.from_raw_documents(settings.raw_data_dir)
         self.vector_store = (
-            SupabaseVectorStore(settings.supabase_url, settings.supabase_key)
-            if settings.supabase_url and settings.supabase_key
+            QdrantVectorStore(settings.qdrant_url, settings.qdrant_api_key, settings.qdrant_collection)
+            if settings.qdrant_url and settings.qdrant_api_key
             else None
         )
         self._embedder: EmbeddingGenerator | None = None

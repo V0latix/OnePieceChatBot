@@ -1,4 +1,4 @@
-"""Phase 2: chunking + embeddings + upload optionnel Supabase."""
+"""Phase 2: chunking + embeddings + upload optionnel Qdrant."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 from src.config.settings import get_settings
 from src.processing.chunker import DocumentChunker
 from src.processing.embedder import EmbeddingGenerator
-from src.processing.vector_store import SupabaseVectorStore
+from src.processing.vector_store import QdrantVectorStore
 from src.scraper.exporter import JsonExporter
 from src.utils.logger import configure_logging, get_logger
 
@@ -28,7 +28,7 @@ def load_documents(raw_dir: Path) -> list:
 def main() -> None:
     """Point d'entree CLI du pipeline de vectorisation."""
     parser = argparse.ArgumentParser(description="Chunk, embed, and optionally upload to Supabase")
-    parser.add_argument("--dry-run", action="store_true", help="Ne fait pas l'upload Supabase")
+    parser.add_argument("--dry-run", action="store_true", help="Ne fait pas l'upload Qdrant")
     args = parser.parse_args()
 
     settings = get_settings()
@@ -61,16 +61,16 @@ def main() -> None:
     logger.info("Chunks + embeddings sauves: %s", embeddings_path)
 
     if args.dry_run:
-        logger.info("Dry-run actif: pas d'upload Supabase")
+        logger.info("Dry-run actif: pas d'upload Qdrant")
         return
 
-    if not (settings.supabase_url and settings.supabase_key):
-        logger.warning("SUPABASE_URL/SUPABASE_KEY absents: upload ignore")
+    if not (settings.qdrant_url and settings.qdrant_api_key):
+        logger.warning("QDRANT_URL/QDRANT_API_KEY absents: upload ignore")
         return
 
-    store = SupabaseVectorStore(settings.supabase_url, settings.supabase_key)
+    store = QdrantVectorStore(settings.qdrant_url, settings.qdrant_api_key, settings.qdrant_collection)
     store.upsert_chunks(chunks, embeddings)
-    logger.info("Upload Supabase termine (%s chunks)", len(chunks))
+    logger.info("Upload Qdrant termine (%s chunks)", len(chunks))
 
 
 if __name__ == "__main__":
