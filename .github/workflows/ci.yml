@@ -31,8 +31,6 @@ jobs:
       - name: Run pytest
         run: python -m pytest -q
         env:
-          PYTHONPATH: src
-        env:
           QDRANT_URL: ""
           QDRANT_API_KEY: ""
           NEO4J_URI: ""
