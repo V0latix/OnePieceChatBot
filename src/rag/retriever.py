@@ -9,9 +9,9 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-from src.config.settings import Settings
-from src.processing.embedder import EmbeddingGenerator
-from src.processing.vector_store import QdrantVectorStore
+from config.settings import Settings
+from processing.embedder import EmbeddingGenerator
+from processing.vector_store import QdrantVectorStore
 
 
 _WORD_RE = re.compile(r"[a-zA-Z0-9']+")

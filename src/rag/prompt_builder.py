@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.rag.retriever import RetrievalResult
+from rag.retriever import RetrievalResult
 
 
 SYSTEM_PROMPT_TEMPLATE = """Tu es un expert encyclopedique de l'univers One Piece, le manga cree par Eiichiro Oda.

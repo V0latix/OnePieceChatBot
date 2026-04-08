@@ -5,8 +5,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
-from src.api.dependencies import RAGService, get_rag_service
-from src.api.models import AskRequest, AskResponse
+from api.dependencies import RAGService, get_rag_service
+from api.models import AskRequest, AskResponse
 
 router = APIRouter(prefix="/ask", tags=["ask"])
 

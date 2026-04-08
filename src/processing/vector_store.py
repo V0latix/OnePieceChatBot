@@ -15,8 +15,8 @@ from qdrant_client.models import (
     VectorParams,
 )
 
-from src.processing.chunker import ChunkRecord
-from src.utils.circuit_breaker import CircuitBreaker, CircuitBreakerOpen
+from processing.chunker import ChunkRecord
+from utils.circuit_breaker import CircuitBreaker, CircuitBreakerOpen
 
 # Dimensions du modele BAAI/bge-large-en-v1.5
 _VECTOR_SIZE = 1024

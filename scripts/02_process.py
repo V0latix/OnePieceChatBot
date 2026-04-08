@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.config.settings import get_settings
-from src.scraper.exporter import JsonExporter
-from src.utils.logger import configure_logging, get_logger
+from config.settings import get_settings
+from scraper.exporter import JsonExporter
+from utils.logger import configure_logging, get_logger
 
 
 def iter_raw_documents(raw_dir: Path) -> list[Path]:

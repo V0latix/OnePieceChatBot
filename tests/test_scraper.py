@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.scraper.cleaner import WikitextCleaner
+from scraper.cleaner import WikitextCleaner
 
 
 def test_cleaner_extracts_infobox_and_sections() -> None:

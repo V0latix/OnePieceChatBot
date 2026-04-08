@@ -10,8 +10,8 @@ from typing import Any, Iterable
 import tiktoken
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.config.settings import Settings
-from src.scraper.exporter import ScrapedPageDocument
+from config.settings import Settings
+from scraper.exporter import ScrapedPageDocument
 
 try:
     from langchain_text_splitters import RecursiveCharacterTextSplitter

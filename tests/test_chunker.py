@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from src.config.settings import get_settings
-from src.processing.chunker import DocumentChunker
-from src.scraper.exporter import ScrapedPageDocument
+from config.settings import get_settings
+from processing.chunker import DocumentChunker
+from scraper.exporter import ScrapedPageDocument
 
 
 def test_chunker_creates_chunks_with_metadata() -> None:

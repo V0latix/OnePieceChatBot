@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import argparse
 
-from src.config.settings import get_settings
-from src.processing.embedder import EmbeddingGenerator
-from src.processing.vector_store import SupabaseVectorStore
-from src.rag.entity_extractor import EntityExtractor
-from src.rag.generator import AnswerGenerator
-from src.rag.graph_retriever import GraphRetriever
-from src.rag.prompt_builder import PromptBuilder
-from src.rag.reranker import WeightedReranker
-from src.rag.retriever import HybridRetriever
-from src.utils.logger import configure_logging, get_logger
+from config.settings import get_settings
+from processing.embedder import EmbeddingGenerator
+from processing.vector_store import SupabaseVectorStore
+from rag.entity_extractor import EntityExtractor
+from rag.generator import AnswerGenerator
+from rag.graph_retriever import GraphRetriever
+from rag.prompt_builder import PromptBuilder
+from rag.reranker import WeightedReranker
+from rag.retriever import HybridRetriever
+from utils.logger import configure_logging, get_logger
 
 
 def main() -> None:

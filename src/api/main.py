@@ -5,11 +5,11 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes.ask import router as ask_router
-from src.api.routes.entity import router as entity_router
-from src.api.routes.graph import router as graph_router
-from src.api.routes.health import router as health_router
-from src.api.routes.search import router as search_router
+from api.routes.ask import router as ask_router
+from api.routes.entity import router as entity_router
+from api.routes.graph import router as graph_router
+from api.routes.health import router as health_router
+from api.routes.search import router as search_router
 
 app = FastAPI(title="One Piece RAG API", version="0.1.0")
 

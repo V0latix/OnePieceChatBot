@@ -6,15 +6,15 @@ import json
 from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
-from src.api.dependencies import RAGService
-from src.config.settings import Settings
+from api.dependencies import RAGService
+from config.settings import Settings
 
 
 def _make_service() -> RAGService:
     """Cree un RAGService avec des settings minimaux (sans DB ni LLM reels)."""
     settings = Settings(
-        supabase_url=None,
-        supabase_key=None,
+        qdrant_url=None,
+        qdrant_api_key=None,
         neo4j_uri=None,
         neo4j_user=None,
         neo4j_password=None,

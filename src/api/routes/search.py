@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
 
-from src.api.dependencies import RAGService, get_rag_service
-from src.api.models import SearchResponse, SearchResult
+from api.dependencies import RAGService, get_rag_service
+from api.models import SearchResponse, SearchResult
 
 router = APIRouter(prefix="/search", tags=["search"])
 

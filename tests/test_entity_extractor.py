@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.rag.entity_extractor import EntityExtractor
+from rag.entity_extractor import EntityExtractor
 
 
 def test_entity_extractor_detects_full_name_from_alias() -> None:

@@ -7,8 +7,8 @@ from typing import Any
 from neo4j import GraphDatabase
 from neo4j.exceptions import Neo4jError
 
-from src.config.settings import Settings
-from src.utils.circuit_breaker import CircuitBreaker, CircuitBreakerOpen
+from config.settings import Settings
+from utils.circuit_breaker import CircuitBreaker, CircuitBreakerOpen
 
 # Timeouts Neo4j (secondes)
 _NEO4J_CONNECTION_TIMEOUT = 10

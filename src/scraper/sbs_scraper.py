@@ -6,8 +6,8 @@ from typing import Any
 
 import httpx
 
-from src.config.settings import Settings
-from src.utils.logger import get_logger
+from config.settings import Settings
+from utils.logger import get_logger
 
 
 class SBSScraper:

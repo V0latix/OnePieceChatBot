@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 
-from src.config.settings import get_settings
-from src.rag.retriever import HybridRetriever
+from config.settings import get_settings
+from rag.retriever import HybridRetriever
 
 
 class DummyEmbedder:

@@ -6,12 +6,12 @@ import argparse
 import json
 from pathlib import Path
 
-from src.config.settings import get_settings
-from src.processing.chunker import DocumentChunker
-from src.processing.embedder import EmbeddingGenerator
-from src.processing.vector_store import QdrantVectorStore
-from src.scraper.exporter import JsonExporter
-from src.utils.logger import configure_logging, get_logger
+from config.settings import get_settings
+from processing.chunker import DocumentChunker
+from processing.embedder import EmbeddingGenerator
+from processing.vector_store import QdrantVectorStore
+from scraper.exporter import JsonExporter
+from utils.logger import configure_logging, get_logger
 
 
 def load_documents(raw_dir: Path) -> list:

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import argparse
 
-from src.config.settings import get_settings
-from src.processing.graph_builder import GraphBuilder, GraphTriplet
-from src.scraper.exporter import JsonExporter
-from src.utils.logger import configure_logging, get_logger
+from config.settings import get_settings
+from processing.graph_builder import GraphBuilder, GraphTriplet
+from scraper.exporter import JsonExporter
+from utils.logger import configure_logging, get_logger
 
 
 def main() -> None:

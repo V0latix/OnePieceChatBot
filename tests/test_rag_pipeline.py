@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from src.rag.prompt_builder import PromptBuilder
-from src.rag.retriever import RetrievalResult
+from rag.prompt_builder import PromptBuilder
+from rag.retriever import RetrievalResult
 
 
 def test_prompt_builder_formats_context_and_graph() -> None:

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from src.api.dependencies import get_health_snapshot
-from src.api.models import HealthResponse
+from api.dependencies import get_health_snapshot
+from api.models import HealthResponse
 
 router = APIRouter(prefix="/health", tags=["health"])
 

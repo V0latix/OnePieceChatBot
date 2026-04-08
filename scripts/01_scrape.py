@@ -6,12 +6,12 @@ import argparse
 import re
 from collections import OrderedDict
 
-from src.config.settings import get_settings
-from src.scraper.categorizer import PageCategorizer
-from src.scraper.cleaner import WikitextCleaner
-from src.scraper.exporter import JsonExporter, ScrapedPageDocument
-from src.scraper.fandom_spider import FandomSpider
-from src.utils.logger import configure_logging, get_logger
+from config.settings import get_settings
+from scraper.categorizer import PageCategorizer
+from scraper.cleaner import WikitextCleaner
+from scraper.exporter import JsonExporter, ScrapedPageDocument
+from scraper.fandom_spider import FandomSpider
+from utils.logger import configure_logging, get_logger
 
 SEED_CATEGORIES = [
     "Category:Characters",

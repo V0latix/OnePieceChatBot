@@ -13,8 +13,8 @@ from urllib.parse import quote
 import httpx
 from pydantic import BaseModel, Field
 
-from src.config.settings import Settings
-from src.utils.logger import get_logger
+from config.settings import Settings
+from utils.logger import get_logger
 
 
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}

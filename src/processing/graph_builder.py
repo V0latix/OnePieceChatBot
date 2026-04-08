@@ -11,9 +11,9 @@ from typing import Any
 from neo4j import GraphDatabase
 from neo4j.exceptions import Neo4jError, ServiceUnavailable
 
-from src.config.settings import Settings
-from src.scraper.exporter import ScrapedPageDocument
-from src.utils.logger import get_logger
+from config.settings import Settings
+from scraper.exporter import ScrapedPageDocument
+from utils.logger import get_logger
 
 
 _RELATION_CLEAN_RE = re.compile(r"[^A-Z0-9_]")

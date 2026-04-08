@@ -8,9 +8,9 @@ from collections.abc import Generator
 import httpx
 from groq import Groq
 
-from src.config.settings import Settings
-from src.rag.prompt_builder import PromptBuilder
-from src.utils.circuit_breaker import CircuitBreaker, CircuitBreakerOpen
+from config.settings import Settings
+from rag.prompt_builder import PromptBuilder
+from utils.circuit_breaker import CircuitBreaker, CircuitBreakerOpen
 
 # Timeouts LLM
 _GROQ_TIMEOUT = 30.0

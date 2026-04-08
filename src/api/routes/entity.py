@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from src.api.dependencies import RAGService, get_rag_service
-from src.api.models import EntityResponse
+from api.dependencies import RAGService, get_rag_service
+from api.models import EntityResponse
 
 router = APIRouter(prefix="/entity", tags=["entity"])
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.utils.logger import configure_logging, get_logger
+from utils.logger import configure_logging, get_logger
 
 
 def main() -> None:

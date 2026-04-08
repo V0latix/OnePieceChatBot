@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.rag.prompt_builder import PromptBuilder
+from rag.prompt_builder import PromptBuilder
 
 
 def _make_builder() -> PromptBuilder:
