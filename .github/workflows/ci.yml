@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python:
+    name: Python tests & import smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Smoke test Python imports
+        run: python -c "import api.main; import rag.retriever; import rag.spoiler_filter"
+        working-directory: .
+        env:
+          PYTHONPATH: src
+
+      - name: Run pytest
+        run: python -m pytest -q
+        env:
+          PYTHONPATH: src
+        env:
+          QDRANT_URL: ""
+          QDRANT_API_KEY: ""
+          NEO4J_URI: ""
+          NEO4J_USER: ""
+          NEO4J_PASSWORD: ""
+          GROQ_API_KEY: ""
+
+  frontend:
+    name: Next.js build & lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Lint
+        run: npx eslint src
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000

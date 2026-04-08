@@ -17,4 +17,5 @@ pydantic-settings>=2.4
 python-dotenv>=1.0
 rich>=13.0
 tqdm>=4.66
+slowapi>=0.1.9
 pytest>=8.2

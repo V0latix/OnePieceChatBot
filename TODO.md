@@ -1,46 +1,78 @@
-# TODO — Déploiement Vercel
+# TODO — OnePiece RAG
 
-## [ ] 1. Installer ngrok
+## 🔴 Critique (bloque la prod)
+
+### [X] Uploader les vecteurs dans Qdrant
+Le cluster est vide. Les 250 chunks locaux doivent être uploadés pour que le RAG fonctionne en prod.
 ```bash
-brew install ngrok
+source .venv/bin/activate
+python scripts/03_chunk_and_embed.py
 ```
-Créer un compte gratuit sur [ngrok.com](https://ngrok.com) pour obtenir un authtoken.
+> Si tu veux plus de données, relance d'abord le scraping complet : `python scripts/01_scrape.py`
 
-## [ ] 2. Configurer l'authtoken ngrok
+### [X] Implémenter le filtre anti-spoiler dans le pipeline RAG
+`spoiler_limit_arc` est accepté par l'API mais ignoré (`_ = spoiler_limit_arc` dans `dependencies.py:102` et `:153`).
+Il faut filtrer les chunks dont l'arc est postérieur à l'arc limite avant le reranking.
+
+---
+
+## 🟠 Important (qualité & robustesse)
+
+### [X] Scraping complet du wiki
+Actuellement limité à `--max-pages 20`. Lancer le scraping complet pour avoir une base de connaissance riche.
 ```bash
-ngrok config add-authtoken TON_TOKEN
+python scripts/01_scrape.py  # sans --max-pages pour tout scraper
+python scripts/03_chunk_and_embed.py
+python scripts/04_build_graph.py
 ```
 
-## [ ] 3. Démarrer le backend et exposer via ngrok
-Dans un terminal :
+### [X] Implémenter scripts/06_eval.py (évaluation qualité)
+Prévu dans `Instruction.md` mais jamais créé. Mesurer precision/recall du RAG sur un jeu de questions de référence One Piece.
+
+### [X] Implémenter src/scraper/sbs_scraper.py
+Le fichier existe mais n'a que 28 lignes (stub). Les SBS (Q&A d'Oda) sont une source précieuse pour les anecdotes et relations entre personnages.
+
+### [X] Mise à jour Next.js 14 → 15
+Vulnérabilité critique signalée à chaque build Vercel. Voir [security update](https://nextjs.org/blog/security-update-2025-12-11).
 ```bash
-source .venv/bin/activate && uvicorn src.api.main:app --reload
+cd frontend && npm install next@latest react@latest react-dom@latest
 ```
-Dans un autre terminal :
-```bash
-ngrok http 8000
-```
-Copier l'URL publique affichée (ex: `https://abc123.ngrok-free.app`).
 
-## [ ] 4. Déployer le frontend sur Vercel
-```bash
-npx vercel
-```
-Vercel détecte automatiquement le `vercel.json` à la racine. Suivre les prompts.
+---
 
-## [ ] 5. Configurer `NEXT_PUBLIC_API_BASE_URL` dans Vercel
-Dashboard Vercel → ton projet → **Settings → Environment Variables**
+## 🟡 Améliorations (nice to have)
 
-| Variable | Valeur |
-|----------|--------|
-| `NEXT_PUBLIC_API_BASE_URL` | `https://abc123.ngrok-free.app` |
+### [X] CI/CD GitHub Actions
+Pas de `.github/workflows/`. Ajouter un workflow minimal :
+- `pytest` sur push
+- `npm run build && npm run lint` sur push
+- Smoke test import Python (cf. recommandation Codex review)
 
-> ⚠️ L'URL ngrok change à chaque redémarrage sur le plan gratuit.
-> Ngrok offre 1 domaine statique gratuit — recommandé pour éviter de répéter cette étape.
+### [X] Caching des requêtes fréquentes
+Les questions répétées (`"Qui est Luffy ?"`) refont tout le pipeline. Ajouter un cache LRU en mémoire sur les 100 dernières réponses dans `RAGService`.
 
-## [ ] 6. Redéployer après avoir ajouté l'env var
-`NEXT_PUBLIC_API_BASE_URL` est injectée au **build**, pas au runtime.
-```bash
-npx vercel --prod
-```
-Ou cliquer **Redeploy** dans le dashboard Vercel.
+### [X] Rate limiting sur l'API
+Pas de protection contre les abus. Ajouter `slowapi` sur `/api/ask` et `/api/ask/stream` (ex: 10 req/min par IP).
+
+### [X] Gérer l'expiration du cluster Qdrant
+Le cluster est supprimé après 4 semaines d'inactivité. Ajouter un script de "ping" hebdomadaire ou documenter la procédure de ré-upload depuis le JSONL local.
+
+### [X] UI pour l'endpoint /api/search
+`GET /api/search?q=...` existe côté backend mais aucun composant frontend ne l'utilise. Ajouter une barre de recherche directe dans le frontend.
+
+### [X] Mettre à jour CLAUDE.md
+Plusieurs sections sont obsolètes (références à Supabase, structure des imports `src.xxx`).
+
+---
+
+## 📋 Rappels techniques
+
+| Commande | Usage |
+|---|---|
+| `python scripts/01_scrape.py --max-pages 20` | Scraping partiel (dev) |
+| `python scripts/03_chunk_and_embed.py` | Upload vecteurs → Qdrant |
+| `python scripts/04_build_graph.py` | Rebuild graphe Neo4j |
+| `uvicorn api.main:app --reload` | Démarrer le backend |
+| `ngrok http 8000` | Exposer le backend (prod perso) |
+| `cd frontend && vercel deploy --prod` | Déployer le frontend |
+| `.venv/bin/python -m pytest` | Lancer les tests |

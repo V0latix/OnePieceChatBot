@@ -1,72 +1,97 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 
 import ChatInterface from "../components/ChatInterface";
 import EntityCard from "../components/EntityCard";
 import GraphViewer from "../components/GraphViewer";
+import SearchBar from "../components/SearchBar";
 import SpoilerFilter from "../components/SpoilerFilter";
 import { EntityResponse, fetchEntity, fetchGraph, GraphResponse } from "../lib/api";
+
+interface PanelState {
+  entity: EntityResponse | null;
+  graph: GraphResponse | null;
+  entityLoading: boolean;
+  graphLoading: boolean;
+  entityError: string | null;
+  graphError: string | null;
+}
+
+type PanelAction =
+  | { type: "reset" }
+  | { type: "loading" }
+  | { type: "entity_ok"; payload: EntityResponse }
+  | { type: "entity_err" }
+  | { type: "entity_done" }
+  | { type: "graph_ok"; payload: GraphResponse }
+  | { type: "graph_err" }
+  | { type: "graph_done" };
+
+const INITIAL: PanelState = {
+  entity: null,
+  graph: null,
+  entityLoading: false,
+  graphLoading: false,
+  entityError: null,
+  graphError: null,
+};
+
+function panelReducer(state: PanelState, action: PanelAction): PanelState {
+  switch (action.type) {
+    case "reset":
+      return INITIAL;
+    case "loading":
+      return { ...INITIAL, entityLoading: true, graphLoading: true };
+    case "entity_ok":
+      return { ...state, entity: action.payload, entityError: null };
+    case "entity_err":
+      return { ...state, entity: null, entityError: "Impossible de charger la fiche entite." };
+    case "entity_done":
+      return { ...state, entityLoading: false };
+    case "graph_ok":
+      return { ...state, graph: action.payload, graphError: null };
+    case "graph_err":
+      return { ...state, graph: null, graphError: "Impossible de charger le sous-graphe." };
+    case "graph_done":
+      return { ...state, graphLoading: false };
+  }
+}
 
 export default function HomePage() {
   const [spoilerLimit, setSpoilerLimit] = useState("Aucun");
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
-  const [entity, setEntity] = useState<EntityResponse | null>(null);
-  const [graph, setGraph] = useState<GraphResponse | null>(null);
-  const [entityLoading, setEntityLoading] = useState(false);
-  const [graphLoading, setGraphLoading] = useState(false);
-  const [entityError, setEntityError] = useState<string | null>(null);
-  const [graphError, setGraphError] = useState<string | null>(null);
+  const [panel, dispatch] = useReducer(panelReducer, INITIAL);
 
   useEffect(() => {
     if (!selectedEntity) {
-      setEntity(null);
-      setGraph(null);
-      setEntityError(null);
-      setGraphError(null);
+      dispatch({ type: "reset" });
       return;
     }
 
     let cancelled = false;
-    setEntityLoading(true);
-    setGraphLoading(true);
-    setEntityError(null);
-    setGraphError(null);
+    dispatch({ type: "loading" });
 
     fetchEntity(selectedEntity)
       .then((payload) => {
-        if (!cancelled) {
-          setEntity(payload);
-        }
+        if (!cancelled) dispatch({ type: "entity_ok", payload });
       })
       .catch(() => {
-        if (!cancelled) {
-          setEntity(null);
-          setEntityError("Impossible de charger la fiche entite.");
-        }
+        if (!cancelled) dispatch({ type: "entity_err" });
       })
       .finally(() => {
-        if (!cancelled) {
-          setEntityLoading(false);
-        }
+        if (!cancelled) dispatch({ type: "entity_done" });
       });
 
     fetchGraph(selectedEntity, 2)
       .then((payload) => {
-        if (!cancelled) {
-          setGraph(payload);
-        }
+        if (!cancelled) dispatch({ type: "graph_ok", payload });
       })
       .catch(() => {
-        if (!cancelled) {
-          setGraph(null);
-          setGraphError("Impossible de charger le sous-graphe.");
-        }
+        if (!cancelled) dispatch({ type: "graph_err" });
       })
       .finally(() => {
-        if (!cancelled) {
-          setGraphLoading(false);
-        }
+        if (!cancelled) dispatch({ type: "graph_done" });
       });
 
     return () => {
@@ -89,11 +114,12 @@ export default function HomePage() {
         <ChatInterface spoilerLimitArc={spoilerLimit} onPrimaryEntityChange={setSelectedEntity} />
         <div className="space-y-5">
           <SpoilerFilter value={spoilerLimit} onChange={setSpoilerLimit} />
-          <EntityCard entity={entity} loading={entityLoading} error={entityError} />
+          <SearchBar spoilerLimitArc={spoilerLimit} />
+          <EntityCard entity={panel.entity} loading={panel.entityLoading} error={panel.entityError} />
         </div>
       </div>
 
-      <GraphViewer graph={graph} loading={graphLoading} error={graphError} />
+      <GraphViewer graph={panel.graph} loading={panel.graphLoading} error={panel.graphError} />
     </main>
   );
 }

@@ -24,6 +24,8 @@ export default function ChatInterface({ spoilerLimitArc, onPrimaryEntityChange }
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  // streamingStarted passe a true des que le premier token arrive (utilise dans le JSX)
+  const [streamingStarted, setStreamingStarted] = useState(false);
   // Ref pour accumuler les tokens sans re-render a chaque caractere
   const streamingIndexRef = useRef<number | null>(null);
 
@@ -46,6 +48,7 @@ export default function ChatInterface({ spoilerLimitArc, onPrimaryEntityChange }
 
     // Ajouter un message assistant vide qui sera rempli par le stream
     const assistantMessage: Message = { role: "assistant", content: "", streaming: true };
+    setStreamingStarted(false);
     setMessages((current) => {
       streamingIndexRef.current = current.length;
       return [...current, assistantMessage];
@@ -66,6 +69,7 @@ export default function ChatInterface({ spoilerLimitArc, onPrimaryEntityChange }
             onPrimaryEntityChange?.(entities[0] ?? null);
           },
           onToken: (text) => {
+            setStreamingStarted(true);
             setMessages((current) => {
               const idx = streamingIndexRef.current;
               if (idx === null) return current;
@@ -83,6 +87,7 @@ export default function ChatInterface({ spoilerLimitArc, onPrimaryEntityChange }
               return updated;
             });
             streamingIndexRef.current = null;
+            setStreamingStarted(false);
             setLoading(false);
           },
           onError: (err) => {
@@ -98,6 +103,7 @@ export default function ChatInterface({ spoilerLimitArc, onPrimaryEntityChange }
               return updated;
             });
             streamingIndexRef.current = null;
+            setStreamingStarted(false);
             setLoading(false);
           },
         },
@@ -116,6 +122,7 @@ export default function ChatInterface({ spoilerLimitArc, onPrimaryEntityChange }
         return [...current, { role: "assistant", content: errorContent }];
       });
       streamingIndexRef.current = null;
+      setStreamingStarted(false);
       onPrimaryEntityChange?.(null);
       setLoading(false);
     }
@@ -139,7 +146,7 @@ export default function ChatInterface({ spoilerLimitArc, onPrimaryEntityChange }
             />
           </div>
         ))}
-        {loading && streamingIndexRef.current === null ? (
+        {loading && !streamingStarted ? (
           <LoadingIndicator label="Recherche du contexte en cours..." />
         ) : null}
       </div>

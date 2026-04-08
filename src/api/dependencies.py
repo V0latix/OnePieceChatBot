@@ -6,6 +6,7 @@ import json
 import re
 from collections.abc import Generator
 from functools import lru_cache
+from typing import Any
 
 from api.models import AskResponse, SourceCitation
 from config.settings import Settings, get_settings
@@ -18,10 +19,12 @@ from rag.graph_retriever import GraphRetriever
 from rag.prompt_builder import PromptBuilder
 from rag.reranker import WeightedReranker
 from rag.retriever import HybridRetriever, RetrievalResult
+from rag.spoiler_filter import filter_by_spoiler_limit
 from utils.logger import configure_logging, get_logger
 
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
+_CACHE_SIZE = 100
 
 
 class RAGService:
@@ -31,6 +34,10 @@ class RAGService:
         self.settings = settings
         configure_logging(settings.log_level)
         self.logger = get_logger(__name__)
+
+        # Cache LRU pour eviter de recomputer les questions frequentes (100 entrees)
+        self._ask_cache: dict[tuple[str, str | None], AskResponse] = {}
+        self._ask_cache_keys: list[tuple[str, str | None]] = []
 
         self.entity_extractor = EntityExtractor.from_raw_documents(settings.raw_data_dir)
         self.vector_store = (
@@ -74,6 +81,17 @@ class RAGService:
             )
         return self._retriever
 
+    def _cache_get(self, key: tuple[str, str | None]) -> AskResponse | None:
+        return self._ask_cache.get(key)
+
+    def _cache_put(self, key: tuple[str, str | None], value: AskResponse) -> None:
+        if key not in self._ask_cache:
+            if len(self._ask_cache_keys) >= _CACHE_SIZE:
+                oldest = self._ask_cache_keys.pop(0)
+                self._ask_cache.pop(oldest, None)
+            self._ask_cache_keys.append(key)
+        self._ask_cache[key] = value
+
     def ask(
         self,
         question: str,
@@ -81,6 +99,13 @@ class RAGService:
         history: list[dict[str, str]] | None = None,
     ) -> AskResponse:
         """Execute une requete RAG complete."""
+        # Cache LRU : les requetes sans historique sont mises en cache
+        if not history:
+            cache_key = (question.strip().lower(), spoiler_limit_arc)
+            cached = self._cache_get(cache_key)
+            if cached is not None:
+                return cached
+
         retriever = self._get_retriever()
         entities = self.entity_extractor.extract(question)
         retrieval_results = retriever.retrieve(
@@ -89,6 +114,7 @@ class RAGService:
             top_k=max(self.settings.retrieval_top_k * 3, self.settings.retrieval_top_k),
         )
         reranked = self.reranker.rerank(retrieval_results)
+        reranked = filter_by_spoiler_limit(reranked, spoiler_limit_arc)
         top_results = reranked[: self.settings.retrieval_top_k]
 
         graph_rows: list[dict[str, str]] = []
@@ -97,9 +123,6 @@ class RAGService:
 
         context = self.prompt_builder.build_context(top_results, top_k=self.settings.retrieval_top_k)
         graph_context = self.prompt_builder.build_graph_context(graph_rows)
-
-        # Le filtre spoiler est present pour extension future (pas encore applique finement ici).
-        _ = spoiler_limit_arc
 
         answer = self.generator.generate_answer(
             question=question,
@@ -113,12 +136,15 @@ class RAGService:
             confidence = sum(row.final_score for row in top_results) / len(top_results)
             confidence = max(0.0, min(1.0, confidence))
 
-        return AskResponse(
+        response = AskResponse(
             answer=answer,
             sources=self._sources_from_results(top_results),
             entities=entities,
             confidence=confidence,
         )
+        if not history:
+            self._cache_put(cache_key, response)  # type: ignore[arg-type]
+        return response
 
     def ask_stream(
         self,
@@ -141,6 +167,7 @@ class RAGService:
             top_k=max(self.settings.retrieval_top_k * 3, self.settings.retrieval_top_k),
         )
         reranked = self.reranker.rerank(retrieval_results)
+        reranked = filter_by_spoiler_limit(reranked, spoiler_limit_arc)
         top_results = reranked[: self.settings.retrieval_top_k]
 
         graph_rows: list[dict[str, str]] = []
@@ -149,8 +176,6 @@ class RAGService:
 
         context = self.prompt_builder.build_context(top_results, top_k=self.settings.retrieval_top_k)
         graph_context = self.prompt_builder.build_graph_context(graph_rows)
-
-        _ = spoiler_limit_arc
 
         confidence = 0.0
         if top_results:
@@ -199,7 +224,12 @@ class RAGService:
         """Retourne un sous-graphe autour d'une entite."""
         return self.graph_retriever.fetch_subgraph(entity_name, depth=depth, limit=100)
 
-    def search(self, query: str, entity_type: str | None = None) -> list[RetrievalResult]:
+    def search(
+        self,
+        query: str,
+        entity_type: str | None = None,
+        spoiler_limit_arc: str | None = None,
+    ) -> list[RetrievalResult]:
         """Expose la recherche hybride brute pour /api/search."""
         retriever = self._get_retriever()
         results = retriever.retrieve(
@@ -209,6 +239,7 @@ class RAGService:
             top_k=max(self.settings.retrieval_top_k * 3, self.settings.retrieval_top_k),
         )
         reranked = self.reranker.rerank(results)
+        reranked = filter_by_spoiler_limit(reranked, spoiler_limit_arc)
         return reranked[: self.settings.retrieval_top_k]
 
     def health(self) -> dict[str, int | str]:

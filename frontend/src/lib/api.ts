@@ -139,6 +139,28 @@ export async function fetchEntity(name: string): Promise<EntityResponse> {
   return (await response.json()) as EntityResponse;
 }
 
+export interface SearchResult {
+  chunk_id: string;
+  entity_name: string;
+  entity_type: string;
+  section: string;
+  content: string;
+  source_url: string;
+  score: number;
+}
+
+export async function searchChunks(query: string, entityType?: string, spoilerLimitArc?: string): Promise<SearchResult[]> {
+  const params = new URLSearchParams({ q: query });
+  if (entityType) params.set("type", entityType);
+  if (spoilerLimitArc && spoilerLimitArc !== "Aucun") params.set("spoiler_limit_arc", spoilerLimitArc);
+  const response = await fetch(`${apiBaseUrl()}/api/search?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error(`Search API error: ${response.status}`);
+  }
+  const data = (await response.json()) as { results: SearchResult[] };
+  return data.results;
+}
+
 export async function fetchGraph(name: string, depth = 2): Promise<GraphResponse> {
   const response = await fetch(
     `${apiBaseUrl()}/api/graph/${encodeURIComponent(name)}?depth=${encodeURIComponent(String(depth))}`,
