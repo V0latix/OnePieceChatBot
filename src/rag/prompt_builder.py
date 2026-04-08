@@ -49,15 +49,31 @@ class PromptBuilder:
         ]
         return "\n".join(lines)
 
-    def build_messages(self, question: str, context: str, graph_context: str) -> list[dict[str, str]]:
-        """Construit les messages compatibles API chat."""
-        return [
+    def build_messages(
+        self,
+        question: str,
+        context: str,
+        graph_context: str,
+        history: list[dict[str, str]] | None = None,
+    ) -> list[dict[str, str]]:
+        """Construit les messages compatibles API chat.
+
+        L'historique (max 6 derniers messages = 3 echanges) est insere entre
+        le system prompt et la question courante pour que le LLM ait du contexte
+        conversationnel sans depasser la fenetre de contexte.
+        """
+        messages: list[dict[str, str]] = [
             {
                 "role": "system",
                 "content": SYSTEM_PROMPT_TEMPLATE.format(
                     context=context,
                     graph_context=graph_context,
                 ),
-            },
-            {"role": "user", "content": question},
+            }
         ]
+        # Garde les 6 derniers messages (3 echanges user/assistant)
+        if history:
+            for msg in history[-6:]:
+                messages.append({"role": msg["role"], "content": msg["content"]})
+        messages.append({"role": "user", "content": question})
+        return messages

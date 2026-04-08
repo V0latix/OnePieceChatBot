@@ -147,9 +147,15 @@ class AnswerGenerator:
             f"{snippet}"
         )
 
-    def generate_answer(self, question: str, context: str, graph_context: str) -> str:
+    def generate_answer(
+        self,
+        question: str,
+        context: str,
+        graph_context: str,
+        history: list[dict[str, str]] | None = None,
+    ) -> str:
         """Genere la reponse finale en essayant Groq puis Ollama."""
-        messages = self.prompt_builder.build_messages(question, context, graph_context)
+        messages = self.prompt_builder.build_messages(question, context, graph_context, history=history)
 
         try:
             return self._generate_with_groq(messages)
@@ -160,10 +166,14 @@ class AnswerGenerator:
                 return self._fallback_from_context(context)
 
     def generate_answer_stream(
-        self, question: str, context: str, graph_context: str
+        self,
+        question: str,
+        context: str,
+        graph_context: str,
+        history: list[dict[str, str]] | None = None,
     ) -> Generator[str, None, None]:
         """Yield des tokens en essayant Groq streaming puis Ollama streaming."""
-        messages = self.prompt_builder.build_messages(question, context, graph_context)
+        messages = self.prompt_builder.build_messages(question, context, graph_context, history=history)
 
         try:
             yield from self._stream_with_groq(messages)

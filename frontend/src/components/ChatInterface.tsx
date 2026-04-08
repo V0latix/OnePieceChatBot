@@ -2,7 +2,7 @@
 
 import { FormEvent, useRef, useState } from "react";
 
-import { askQuestionStream, SourceCitation } from "../lib/api";
+import { askQuestionStream, ConversationMessage, SourceCitation } from "../lib/api";
 import LoadingIndicator from "./LoadingIndicator";
 import MessageBubble from "./MessageBubble";
 
@@ -34,6 +34,12 @@ export default function ChatInterface({ spoilerLimitArc, onPrimaryEntityChange }
     }
 
     const userMessage: Message = { role: "user", content: question.trim() };
+    // Capture l'historique avant d'ajouter le nouveau message (max 6 = 3 echanges)
+    const history: ConversationMessage[] = messages
+      .filter((m) => !m.streaming && m.content.trim())
+      .slice(-6)
+      .map((m) => ({ role: m.role, content: m.content }));
+
     setMessages((current) => [...current, userMessage]);
     setQuestion("");
     setLoading(true);
@@ -96,6 +102,7 @@ export default function ChatInterface({ spoilerLimitArc, onPrimaryEntityChange }
           },
         },
         spoilerLimitArc,
+        history,
       );
     } catch (err) {
       setMessages((current) => {

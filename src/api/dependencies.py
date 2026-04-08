@@ -74,7 +74,12 @@ class RAGService:
             )
         return self._retriever
 
-    def ask(self, question: str, spoiler_limit_arc: str | None = None) -> AskResponse:
+    def ask(
+        self,
+        question: str,
+        spoiler_limit_arc: str | None = None,
+        history: list[dict[str, str]] | None = None,
+    ) -> AskResponse:
         """Execute une requete RAG complete."""
         retriever = self._get_retriever()
         entities = self.entity_extractor.extract(question)
@@ -100,6 +105,7 @@ class RAGService:
             question=question,
             context=context,
             graph_context=graph_context,
+            history=history,
         )
 
         confidence = 0.0
@@ -114,7 +120,12 @@ class RAGService:
             confidence=confidence,
         )
 
-    def ask_stream(self, question: str, spoiler_limit_arc: str | None = None) -> Generator[str, None, None]:
+    def ask_stream(
+        self,
+        question: str,
+        spoiler_limit_arc: str | None = None,
+        history: list[dict[str, str]] | None = None,
+    ) -> Generator[str, None, None]:
         """Execute le pipeline RAG et yield des evenements SSE.
 
         Format SSE emis:
@@ -153,7 +164,7 @@ class RAGService:
         metadata_payload = json.dumps({"sources": sources, "entities": entities, "confidence": confidence})
         yield f"event: metadata\ndata: {metadata_payload}\n\n"
 
-        for token in self.generator.generate_answer_stream(question, context, graph_context):
+        for token in self.generator.generate_answer_stream(question, context, graph_context, history=history):
             yield f"event: token\ndata: {json.dumps({'text': token})}\n\n"
 
         yield "event: done\ndata: {}\n\n"

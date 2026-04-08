@@ -66,6 +66,11 @@ export async function askQuestion(question: string, spoilerLimitArc?: string): P
   return (await response.json()) as AskResponse;
 }
 
+export interface ConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface StreamCallbacks {
   onMetadata: (meta: { sources: SourceCitation[]; entities: string[]; confidence: number }) => void;
   onToken: (text: string) => void;
@@ -77,6 +82,7 @@ export async function askQuestionStream(
   question: string,
   callbacks: StreamCallbacks,
   spoilerLimitArc?: string,
+  history?: ConversationMessage[],
 ): Promise<void> {
   const response = await fetch(`${apiBaseUrl()}/api/ask/stream`, {
     method: "POST",
@@ -84,6 +90,7 @@ export async function askQuestionStream(
     body: JSON.stringify({
       question,
       spoiler_limit_arc: spoilerLimitArc && spoilerLimitArc !== "Aucun" ? spoilerLimitArc : null,
+      history: history ?? [],
     }),
   });
 
