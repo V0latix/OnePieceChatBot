@@ -80,7 +80,7 @@ export default function HomePage() {
         <p className="text-xs uppercase tracking-[0.22em] text-gold">Grand Line Intelligence</p>
         <h1 className="text-5xl leading-none tracking-wide [font-family:var(--font-display)] md:text-7xl">One Piece RAG</h1>
         <p className="mt-3 max-w-3xl text-sm text-[#d2c5a8] md:text-base">
-          Pose n'importe quelle question sur le canon One Piece. Les reponses sont justifiees par des sources wiki/arcs et
+          Pose n&apos;importe quelle question sur le canon One Piece. Les reponses sont justifiees par des sources wiki/arcs et
           enrichies par un knowledge graph.
         </p>
       </header>

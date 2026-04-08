@@ -12,7 +12,7 @@ export default function InfoboxDisplay({ infobox }: InfoboxDisplayProps) {
   const entries = Object.entries(infobox).slice(0, 12);
 
   if (entries.length === 0) {
-    return <p className="text-sm text-[#bba884]">Aucune donnee d'infobox disponible.</p>;
+    return <p className="text-sm text-[#bba884]">Aucune donnee d&apos;infobox disponible.</p>;
   }
 
   return (
