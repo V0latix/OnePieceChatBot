@@ -15,23 +15,76 @@ from scraper.fandom_spider import FandomSpider
 from utils.logger import configure_logging, get_logger
 
 SEED_CATEGORIES = [
-    # Personnages (sources principales — ~1300 pages uniques)
-    "Category:Male_Characters",              # 1043 pages
-    "Category:Female_Characters",            # 290 pages
-    # Groupes & organisations
-    "Category:Pirate_Captains",              # 108 pages
-    "Category:Organizations",               # ~10 pages
-    # Pouvoirs & capacites
-    "Category:Paramecia_Devil_Fruit_Users",  # 102 pages
-    "Category:Zoan_Devil_Fruit_Users",       # ~60 pages
-    "Category:Logia_Devil_Fruit_Users",      # ~20 pages
-    "Category:Observation_Haki_Users",       # 128 pages
-    "Category:Haki_Users",                  # ~20 pages
-    # Lore
-    "Category:Story_Arcs",                  # arcs narratifs
-    "Category:Fighting_Styles",             # styles de combat
-    "Category:Devil_Fruits",                # fruits du demon (taxonomie)
-    "Category:Events",                      # evenements canon
+    # ── Personnages ──────────────────────────────────────────
+    "Category:Male_Characters",                    # 1043 pages
+    "Category:Female_Characters",                  # 290 pages
+    "Category:Deceased_Characters",                # 127 pages
+    "Category:Swordsmen",                          # 238 pages
+    "Category:Giants",                             # 44 pages
+    "Category:Pets",                               # 57 pages
+    "Category:Human_Hybrids",                      # 25 pages
+    "Category:Unknown_Appearance_Characters",      # 20 pages
+    # ── Groupes & equipages ───────────────────────────────────
+    "Category:Pirate_Captains",                    # 108 pages
+    "Category:Roger_Pirates",                      # 33 pages
+    "Category:Whitebeard_Pirates'_Subordinates",   # 44 pages
+    "Category:Big_Mom_Pirates_Officers",           # 70 pages
+    "Category:Big_Mom_Pirates",                    # 20 pages
+    "Category:Kid_Pirates",                        # 22 pages
+    "Category:Spade_Pirates",                      # 20 pages
+    "Category:Ninja-Pirate-Mink-Samurai_Alliance", # 31 pages
+    "Category:Kuja",                               # 22 pages
+    "Category:Organizations",                      # organisations mondiales
+    "Category:Underworld_Organizations",           # 26 pages
+    # ── Antagonistes par saga ────────────────────────────────
+    "Category:East_Blue_Saga_Antagonists",         # 24 pages
+    "Category:Water_7_Saga_Antagonists",           # 73 pages
+    "Category:Summit_War_Saga_Antagonists",        # 70 pages
+    "Category:Wano_Country_Saga_Antagonists",      # 107 pages
+    "Category:Final_Saga_Antagonists",             # 35 pages
+    # ── Marines ──────────────────────────────────────────────
+    "Category:Marine_Vice_Admirals",               # 33 pages
+    "Category:Marineford_Residents",               # 31 pages
+    "Category:New_Marineford_Residents",           # 24 pages
+    "Category:Kings",                              # 31 pages
+    "Category:Samurai",                            # 20 pages
+    "Category:Undercover_Operators",               # 24 pages
+    "Category:Snipers",                            # 24 pages
+    "Category:Martial_Artists",                    # 40 pages
+    # ── Fruits du Demon ──────────────────────────────────────
+    "Category:Shown_Devil_Fruits",                 # 40 pages (pages des fruits eux-memes)
+    "Category:Paramecia",                          # 93 pages
+    "Category:Zoan",                               # 25 pages
+    "Category:Paramecia_Devil_Fruit_Users",        # 102 pages
+    "Category:Zoan_Devil_Fruit_Users",             # ~60 pages
+    "Category:Logia_Devil_Fruit_Users",            # ~20 pages
+    "Category:Gifters",                            # 44 pages (Zoan de Wano)
+    # ── Pouvoirs & styles de combat ─────────────────────────
+    "Category:Observation_Haki_Users",             # 128 pages
+    "Category:Haki_Users",                         # complementaire
+    "Category:Fighting_Styles",                    # 43 pages
+    "Category:Fighters_Who_Use_Animals",           # 24 pages
+    # ── Armes & objets ───────────────────────────────────────
+    "Category:Swords",                             # 40 pages
+    "Category:Famous_Blades",                      # 30 pages
+    # ── Lieux ────────────────────────────────────────────────
+    "Category:Towns_and_Cities",                   # 25 pages
+    "Category:Paradise_Islands",                   # 23 pages
+    "Category:New_World_Islands",                  # 20 pages
+    "Category:New_World_Locations",                # 20 pages
+    "Category:Sabaody_Archipelago_Residents",      # 25 pages
+    "Category:West_Blue_Residents",                # 40 pages
+    "Category:South_Blue_Residents",               # 38 pages
+    "Category:East_Blue_Residents",                # 35 pages
+    # ── Races ────────────────────────────────────────────────
+    "Category:Races_and_Tribes",                   # 24 pages
+    # ── Bateaux, arcs & divers ───────────────────────────────
+    "Category:Ships",                              # 21 pages
+    "Category:Story_Arcs",                         # 34 pages
+    "Category:Events",                             # evenements canon
+    "Category:Terms",                              # 41 pages (termes de lore)
+    "Category:Occupations",                        # 25 pages
+    "Category:Devil_Fruits",                       # taxonomie
 ]
 
 
