@@ -85,6 +85,121 @@ SEED_CATEGORIES = [
     "Category:Terms",                              # 41 pages (termes de lore)
     "Category:Occupations",                        # 25 pages
     "Category:Devil_Fruits",                       # taxonomie
+    # ── Personnages (suite) ──────────────────────────────────
+    "Category:Humans",                             # 1046 pages
+    "Category:Flashback_Introduction_Characters",  # 197 pages
+    "Category:Children",                           # 72 pages
+    "Category:Cover_Story_Introduction_Characters",# 60 pages
+    "Category:Animals",                            # 43 pages
+    "Category:Merfolk",                            # 30 pages
+    "Category:Mink_Tribe",                         # 27 pages
+    "Category:Former_Pirates",                     # 35 pages
+    "Category:Supreme_King_Haki_Users",            # 30 pages
+    "Category:Doctors",                            # 26 pages
+    "Category:Assassins",                          # 24 pages
+    "Category:Former_Marine_Prisoners",            # 23 pages
+    "Category:Mentioned_Only_Characters",          # 18 pages
+    "Category:SBS_Characters",                     # 18 pages
+    "Category:Deities",                            # 17 pages
+    "Category:Mythical_Zoan_Devil_Fruit_Users",    # 23 pages
+    "Category:Multiple_Characters_Articles",       # 25 pages
+    "Category:Toys",                               # 23 pages
+    "Category:Former_Rulers",                      # 22 pages
+    "Category:Shipwrights",                        # 19 pages
+    "Category:Foosha_Village_Characters",          # 18 pages
+    "Category:Fighters_Who_Use_Technology",        # 17 pages
+    "Category:New_World_Residents",                # 17 pages
+    "Category:Kouzuki_Family_Subordinates",        # 19 pages
+    "Category:Donquixote_Pirates_Slaves",          # 20 pages
+    "Category:Whole_Cake_Island_Residents",        # 23 pages
+    "Category:Dressrosa_Residents",                # 29 pages
+    "Category:Elbaph_Residents",                   # 18 pages
+    "Category:Zou_Residents",                      # 15 pages
+    "Category:Charlotte_Family",                   # 15 pages
+    "Category:Former_Foxy_Pirates",                # 18 pages
+    "Category:World_Seeker_Characters",            # 33 pages
+    # ── Groupes (suite) ──────────────────────────────────────
+    "Category:Antagonist_Groups",                  # 66 pages
+    "Category:Former_Pirate_Crews",                # 26 pages
+    "Category:Former_Organizations",               # 16 pages
+    "Category:Marine_Organizations",               # 19 pages
+    "Category:Four_Emperors'_Subordinate_Crews",   # 15 pages
+    "Category:Flashback_Introduction_Groups",      # 16 pages
+    "Category:Former_Marines",                     # 16 pages
+    # ── Antagonistes (suite) ─────────────────────────────────
+    "Category:Dressrosa_Saga_Antagonists",         # 47 pages
+    "Category:Arabasta_Saga_Antagonists",          # 46 pages
+    "Category:Flashback_Antagonists",              # 36 pages
+    "Category:Cover_Story_Antagonists",            # 29 pages
+    "Category:Premier_Show_Antagonists",           # 16 pages
+    # ── Armes & combat (suite) ───────────────────────────────
+    "Category:Trident_Users",                      # 23 pages
+    "Category:Halberd_Users",                      # 21 pages
+    "Category:Shield_Users",                       # 21 pages
+    "Category:Dagger_Users",                       # 20 pages
+    "Category:Lance_Users",                        # 19 pages
+    "Category:Bazooka_Users",                      # 17 pages
+    "Category:Archers",                            # 16 pages
+    "Category:Scythe_Users",                       # 15 pages
+    "Category:Polearms",                           # 16 pages
+    "Category:Living_Weapons",                     # 19 pages
+    "Category:Devil_Fruits_with_Multiple_Users",   # 16 pages
+    "Category:Logia",                              # 16 pages
+    # ── Lieux (suite) ────────────────────────────────────────
+    "Category:Arabasta_Locations",                 # 19 pages
+    "Category:East_Blue_Locations",                # 18 pages
+    "Category:Flashback_Introduction_Locations",   # 38 pages
+    "Category:Cover_Story_Introduction_Locations", # 19 pages
+    "Category:Destroyed_Locations",                # 16 pages
+    "Category:Bars_and_Restaurants",               # 15 pages
+    "Category:Mentioned_Only_Totto_Land_Islands",  # 23 pages
+    "Category:Mentioned_Only_World_Government_Kingdoms", # 21 pages
+    "Category:World_Government_Kingdoms",          # 17 pages
+    # ── Objets & technologie ─────────────────────────────────
+    "Category:Technology",                         # 19 pages
+    "Category:Artifacts",                          # 15 pages
+    "Category:Lists",                              # 50 pages
+    "Category:Positions",                          # 15 pages
+    # ── Lore & media ─────────────────────────────────────────
+    "Category:SBS",                                # 113 pages
+    "Category:Cover_Stories",                      # 21 pages
+    "Category:Battles",                            # 15 pages
+    "Category:Incidents",                          # 15 pages
+    "Category:One_Piece_Movies",                   # 16 pages
+    "Category:One_Piece_Volumes",                  # 115 pages
+    "Category:One_Piece_Magazine",                 # 23 pages
+    "Category:Crossovers",                         # 17 pages
+    "Category:Character_Galleries",                # 16 pages
+    "Category:Special_Volumes",                    # 15 pages
+    "Category:Citation_Needed",                    # 101 pages
+    "Category:Articles_Without_References",        # 99 pages
+    # ── Threads & communaute ─────────────────────────────────
+    "Category:Archived_Threads",                   # 839 pages
+    "Category:One_Piece_Manga_Threads",            # 331 pages
+    "Category:Merchandise",                        # 230 pages
+    "Category:One_Piece_Anime_Threads",            # 139 pages
+    "Category:Wikia_Appearance_Threads",           # 119 pages
+    "Category:One_Piece_Misc_Threads",             # 109 pages
+    "Category:Translation_Threads",                # 46 pages
+    "Category:One_Piece_International",            # 42 pages
+    "Category:Spoilers_Threads",                   # 42 pages
+    "Category:User_Rights_Threads",                # 36 pages
+    "Category:Users_to_Be_Banned_Threads",         # 30 pages
+    "Category:One_Piece_Openings",                 # 28 pages
+    "Category:One_Piece_Endings",                  # 26 pages
+    "Category:One_Piece_Music",                    # 23 pages
+    "Category:One_Piece_Nippon_Judan!_47_Cruise_CD", # 49 pages
+    "Category:Movie_Songs",                        # 18 pages
+    "Category:Community_Cafe_Threads",             # 17 pages
+    "Category:Speedy_Ban_Threads",                 # 17 pages
+    "Category:Miscellaneous_Threads",              # 19 pages
+    "Category:Chit-Chat_Threads",                  # 15 pages
+    "Category:Live_Performances",                  # 16 pages
+    "Category:Manga",                              # 16 pages
+    "Category:One_Piece_in_Love_Characters",       # 16 pages
+    "Category:Pirate_Ships",                       # 15 pages
+    "Category:Males",                              # 15 pages
+    "Category:Discontinued_Mobile_Games",          # 20 pages
 ]
 
 
