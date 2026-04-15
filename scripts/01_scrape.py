@@ -78,6 +78,45 @@ SEED_CATEGORIES = [
     "Category:East_Blue_Residents",                # 35 pages
     # ── Races ────────────────────────────────────────────────
     "Category:Races_and_Tribes",                   # 24 pages
+    # ── Equipages principaux ─────────────────────────────────
+    "Category:Straw_Hat_Pirates",                  # Equipage de Luffy
+    "Category:Heart_Pirates",                      # Equipage de Law
+    "Category:Blackbeard_Pirates",                 # Equipage de Barbe Noire
+    "Category:Red-Haired_Pirates",                 # Equipage de Shanks
+    "Category:Beasts_Pirates",                     # Equipage de Kaido
+    "Category:Donquixote_Pirates",                 # Equipage de Doflamingo
+    "Category:Baroque_Works",                      # Organisation de Crocodile
+    "Category:Revolutionary_Army",                 # Armee de Dragon
+    "Category:Seven_Warlords_of_the_Sea",          # Shichibukai
+    "Category:Worst_Generation",                   # Supernovas
+    "Category:Cipher_Pol",                         # CP0/CP9 agents
+    "Category:World_Government",                   # Gouvernement mondial
+    "Category:Rocks_Pirates",                      # Equipage de Rocks D. Xebec
+    "Category:Sun_Pirates",                        # Equipage de Fisher Tiger
+    "Category:Foxy_Pirates",                       # Equipage de Foxy
+    "Category:Thriller_Bark_Residents",            # Equipage de Moria
+    # ── Races & especes ──────────────────────────────────────
+    "Category:Fish-Men",                           # Hommes-poissons
+    "Category:Dwarves",                            # Nains / Tontatta
+    "Category:Lunarians",                          # Lunarians (race de King)
+    "Category:Skypieans",                          # Habitants du ciel
+    "Category:Shandians",                          # Guerriers de Skypiea
+    "Category:Birkans",                            # Habitants de Birka
+    "Category:Cyborgs",                            # Cyborgs (Franky, Kuma...)
+    "Category:Zombies",                            # Zombies de Thriller Bark
+    # ── Pouvoirs (suite) ─────────────────────────────────────
+    "Category:Armament_Haki_Users",                # Utilisateurs Haki d'armement
+    "Category:Ancient_Zoan_Devil_Fruit_Users",     # Zoan anciens
+    "Category:SMILE_Devil_Fruit_Users",            # Utilisateurs SMILE
+    "Category:Rokushiki_Users",                    # Utilisateurs Rokushiki
+    "Category:Devil_Fruit_Awakening_Users",        # Awakening
+    # ── Lieux (suite) ────────────────────────────────────────
+    "Category:Sky_Islands",                        # Iles celestes
+    "Category:Wano_Country_Residents",             # Habitants de Wano
+    "Category:Water_7_Residents",                  # Habitants de Water 7
+    "Category:Alabasta_Residents",                 # Habitants d'Alabasta
+    "Category:Sabaody_Archipelago",                # Archipel de Sabaody
+    "Category:Marineford",                         # Marinford
     # ── Bateaux, arcs & divers ───────────────────────────────
     "Category:Ships",                              # 21 pages
     "Category:Story_Arcs",                         # 34 pages
