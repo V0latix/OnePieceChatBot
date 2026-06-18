@@ -27,7 +27,7 @@ def load_documents(raw_dir: Path) -> list:
 
 def main() -> None:
     """Point d'entree CLI du pipeline de vectorisation."""
-    parser = argparse.ArgumentParser(description="Chunk, embed, and optionally upload to Supabase")
+    parser = argparse.ArgumentParser(description="Chunk, embed, and optionally upload to Qdrant")
     parser.add_argument("--dry-run", action="store_true", help="Ne fait pas l'upload Qdrant")
     args = parser.parse_args()
 
