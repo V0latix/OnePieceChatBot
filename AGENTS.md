@@ -1,112 +1,260 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+Guidance for Codex/AI agents working in this repository.
 
-## Commands
+## Project Snapshot
 
-**Setup:**
+This repository is a One Piece RAG application with:
+
+- Python/FastAPI backend in `src/`
+- Offline data pipeline in `scripts/`
+- Local generated data under `data/`
+- Next.js frontend in `frontend/`
+- Retrieval stack: Qdrant Cloud first, local JSONL cosine fallback
+- Graph stack: Neo4j Aura for entity relations
+- LLM stack: Groq first, Ollama fallback, context-snippet fallback
+
+The project is designed to run locally on a MacBook Air M4 with free-tier external services.
+
+## Important Repository Facts
+
+- Run Python commands from the repository root.
+- The Python import root is `src`; use `PYTHONPATH=src` when running app commands outside pytest.
+- `pytest` gets `pythonpath = ["src"]` from `pyproject.toml`.
+- Generated data is intentionally ignored by git:
+  - `data/raw/*`
+  - `data/processed/*`
+  - `data/chunks/*`
+  - `data/graph/*`
+- Only the `.gitkeep` files under `data/` are versioned.
+- A clean clone will not contain the scraped corpus, embeddings, or graph triplets.
+- Do not commit `.env`, credentials, `.venv`, `.next`, `node_modules`, or generated pipeline data unless the user explicitly asks for an artifact export.
+
+## Setup
+
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env  # then fill in credentials
+cp .env.example .env
 ```
 
-**Data pipeline (run in order):**
+Fill `.env` with the needed services:
+
+- `QDRANT_URL`
+- `QDRANT_API_KEY`
+- `QDRANT_COLLECTION`
+- `NEO4J_URI`
+- `NEO4J_USER`
+- `NEO4J_PASSWORD`
+- `GROQ_API_KEY`
+- `OLLAMA_BASE_URL`
+- `GROQ_MODEL`
+- `OLLAMA_MODEL`
+
+External services are optional for some local flows because the app has fallbacks, but Qdrant upload and Neo4j graph writes require credentials.
+
+## Common Commands
+
+### Tests
+
 ```bash
-python scripts/01_scrape.py --max-pages 20   # scrape Fandom wiki
-python scripts/03_chunk_and_embed.py         # chunk + embed + upload to Qdrant
-python scripts/04_build_graph.py             # build Neo4j knowledge graph
-python scripts/05_test_rag.py --question "..." # end-to-end RAG test
-python scripts/06_eval.py --top-k 5         # retrieval quality evaluation
+.venv/bin/python -m pytest -q
+.venv/bin/python -m pytest tests/test_retriever.py -q
 ```
 
-**Backend API:**
+Tests must not contact Qdrant, Neo4j, or Groq. `tests/conftest.py` clears those environment variables for pytest so tests stay deterministic even when a local `.env` contains real credentials.
+
+### Backend
+
 ```bash
-uvicorn api.main:app --reload   # run from repo root (PYTHONPATH=src is set via .env)
+PYTHONPATH=src .venv/bin/uvicorn api.main:app --reload
 ```
 
-**Frontend:**
+Health endpoint:
+
 ```bash
-cd frontend && npm install && npm run dev
-cd frontend && npm run build && npm run lint
+curl -s http://localhost:8000/api/health
 ```
 
-**Tests:**
+Main ask endpoint:
+
 ```bash
-.venv/bin/python -m pytest -q           # all tests
-.venv/bin/python -m pytest tests/test_retriever.py -q  # single file
+curl -s http://localhost:8000/api/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"Quel est le fruit du demon de Trafalgar Law ?"}'
 ```
-
-## Architecture
-
-This is a RAG (Retrieval-Augmented Generation) system for answering questions about the One Piece universe. All components are designed to run free on a MacBook Air M4.
-
-### Data Flow
-
-**Offline pipeline:**
-```
-Fandom Wiki (MediaWiki API)
-  → src/scraper/fandom_spider.py    (scrape with retry/backoff)
-  → src/scraper/cleaner.py          (HTML/wikitext cleaning)
-  → src/scraper/categorizer.py      (auto-detect entity types)
-  → data/raw/*.json
-
-  → src/processing/chunker.py       (token-aware splitting, 500 tok / 50 overlap)
-  → src/processing/embedder.py      (BAAI/bge-large-en-v1.5, 1024 dims)
-  → src/processing/vector_store.py  (upload to Qdrant Cloud)
-  → data/chunks/chunks_with_embeddings.jsonl  (local cosine fallback)
-
-  → src/processing/graph_builder.py (extract triplets from infoboxes)
-  → Neo4j Aura                      (UPSERT nodes/edges)
-  → data/graph/*.jsonl              (exported triplets)
-```
-
-**Online query (POST /api/ask):**
-```
-Question
-  → src/rag/entity_extractor.py     (rule-based NER from data/raw/)
-  → src/rag/retriever.py            (hybrid: vector + keyword + graph signals)
-      ├─ Qdrant Cloud search (primary)
-      └─ Local JSONL cosine similarity (fallback)
-  → src/rag/spoiler_filter.py       (arc-based spoiler filtering, applied post-rerank)
-  → src/rag/reranker.py             (0.4*vector + 0.4*graph + 0.2*keyword)
-  → src/rag/graph_retriever.py      (Neo4j Cypher queries)
-  → src/rag/prompt_builder.py       (assemble context + citations)
-  → src/rag/generator.py            (Groq → Ollama → context snippet fallback)
-  → AskResponse (answer + sources + entities + confidence)
-```
-
-### Key Design Decisions
-
-**Fallback chain throughout:** Qdrant → local JSONL for vectors; Groq → Ollama → snippet for LLM. The system degrades gracefully when external services are unavailable.
-
-**Dependency injection:** `src/api/dependencies.py` holds a singleton `RAGService` that lazy-loads embeddings and the retrieval stack on first request (not at startup) to keep the health endpoint fast.
-
-**Reranking weights:** `final_score = 0.4*vector + 0.4*graph + 0.2*keyword` — graph signals are intentionally weighted equally to vector similarity because entity-entity relationships are central to One Piece lore questions.
-
-**Entity extraction:** Rule-based (not ML), builds an alias map from `data/raw/` documents supporting short names, last names, and full name variants. Used to boost graph signals during retrieval.
-
-### API Endpoints
-
-| Endpoint | Purpose |
-|---|---|
-| `POST /api/ask` | Main RAG query → answer + sources + entities + confidence |
-| `GET /api/entity/{name}` | Entity detail (name, type, infobox, relations) |
-| `GET /api/graph/{entity}?depth=2` | Subgraph for D3 visualization |
-| `GET /api/search?q=...` | Raw chunk retrieval |
-| `GET /api/health` | System health (chunk count, graph nodes) |
 
 ### Frontend
 
-Next.js 16 + React 19 + Tailwind CSS + TypeScript. Key components:
-- `ChatInterface.tsx` — main Q&A loop
-- `GraphViewer.tsx` + `D3ForceGraph.tsx` — interactive knowledge graph
-- `SpoilerFilter.tsx` — arc-based spoiler limiting (sends `spoiler_limit_arc` to backend)
-- `SearchBar.tsx` — direct chunk search via `GET /api/search`
-- `lib/api.ts` — all API calls to the backend
+```bash
+cd frontend
+npm install
+npm run dev
+npm run lint
+npm run build
+```
 
-Frontend talks to the backend at `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:8000`).
+The frontend reads `NEXT_PUBLIC_API_BASE_URL`, defaulting to `http://localhost:8000`.
 
-### Configuration
+### Data Pipeline
 
-All settings loaded via pydantic-settings from `src/config/settings.py`. Key env vars: `QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_COLLECTION`, `NEO4J_URI`/`NEO4J_USER`/`NEO4J_PASSWORD`, `GROQ_API_KEY`, `OLLAMA_BASE_URL`, `EMBEDDING_MODEL`, `LLM_MODEL`, `CHUNK_SIZE`, `CHUNK_OVERLAP`, `RETRIEVAL_TOP_K`.
+Run from repo root, with `.venv` activated or `.venv/bin/python`.
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/01_scrape.py --max-pages 20
+PYTHONPATH=src .venv/bin/python scripts/03_chunk_and_embed.py --dry-run
+PYTHONPATH=src .venv/bin/python scripts/03_chunk_and_embed.py
+PYTHONPATH=src .venv/bin/python scripts/04_build_graph.py
+PYTHONPATH=src .venv/bin/python scripts/05_test_rag.py --question "Qui est Luffy ?"
+PYTHONPATH=src .venv/bin/python scripts/06_eval.py --top-k 5 --verbose
+```
+
+Use `--dry-run` on `03_chunk_and_embed.py` when validating chunking/embedding without uploading to Qdrant.
+
+## Architecture
+
+### Offline Flow
+
+```text
+Fandom MediaWiki API
+  -> src/scraper/fandom_spider.py
+  -> src/scraper/cleaner.py
+  -> src/scraper/categorizer.py
+  -> data/raw/*.json
+
+data/raw/*.json
+  -> src/processing/chunker.py
+  -> src/processing/embedder.py
+  -> data/chunks/chunks.jsonl
+  -> data/chunks/chunks_with_embeddings.jsonl
+  -> src/processing/vector_store.py
+  -> Qdrant Cloud
+
+data/raw/*.json
+  -> src/processing/graph_builder.py
+  -> data/graph/triplets.jsonl
+  -> Neo4j Aura
+```
+
+### Online Ask Flow
+
+```text
+POST /api/ask or /api/ask/stream
+  -> api.dependencies.RAGService
+  -> rag.entity_extractor.EntityExtractor
+  -> rag.retriever.HybridRetriever
+       -> Qdrant search if configured
+       -> local data/chunks/chunks_with_embeddings.jsonl fallback
+       -> keyword augmentation
+       -> entity/graph signal
+  -> rag.reranker.WeightedReranker
+  -> rag.spoiler_filter.filter_by_spoiler_limit
+  -> rag.graph_retriever.GraphRetriever
+  -> rag.prompt_builder.PromptBuilder
+  -> rag.generator.AnswerGenerator
+       -> Groq
+       -> Ollama
+       -> retrieved context snippet
+```
+
+## Backend Details
+
+- FastAPI app: `src/api/main.py`
+- Route modules: `src/api/routes/`
+- API schemas: `src/api/models.py`
+- Service singleton and pipeline orchestration: `src/api/dependencies.py`
+- Rate limiting: `src/api/limiter.py` using `slowapi`
+- Settings: `src/config/settings.py`
+
+Keep `GET /api/health` lightweight. Do not initialize embeddings or the full retriever stack in health checks.
+
+`RAGService` lazy-loads the embedder/retriever on first real retrieval. Preserve that behavior unless there is a strong reason to change startup cost.
+
+## RAG Components
+
+- `src/rag/entity_extractor.py`: rule-based aliases from `data/raw`.
+- `src/rag/retriever.py`: hybrid vector + keyword + entity signal retrieval.
+- `src/rag/reranker.py`: weighted final score. Default weights must sum to 1.0.
+- `src/rag/spoiler_filter.py`: arc-based post-rerank filtering.
+- `src/rag/graph_retriever.py`: Neo4j reads for relations/subgraphs.
+- `src/rag/prompt_builder.py`: builds context and messages.
+- `src/rag/generator.py`: Groq/Ollama/snippet fallback chain and streaming.
+
+When changing retrieval behavior, update or add tests for ranking, fallback behavior, and spoiler filtering.
+
+## Data Model Expectations
+
+Scraped raw documents should generally contain:
+
+- `id`
+- `title`
+- `url`
+- `type`
+- `categories`
+- `infobox`
+- `sections`
+- `related_entities`
+- `last_scraped`
+
+Chunk records should preserve enough metadata for citations and filtering:
+
+- `chunk_id`
+- `entity_id`
+- `entity_name`
+- `entity_type`
+- `section`
+- `content`
+- `categories`
+- `related_entities`
+- `token_count`
+- `source_url`
+
+Embeddings use `BAAI/bge-large-en-v1.5` by default and are expected to be 1024-dimensional. Keep this aligned with Qdrant collection vector size in `src/processing/vector_store.py`.
+
+## Frontend Details
+
+- Next.js app router entry: `frontend/src/app/page.tsx`
+- API client: `frontend/src/lib/api.ts`
+- Chat UI: `frontend/src/components/ChatInterface.tsx`
+- Direct search UI: `frontend/src/components/SearchBar.tsx`
+- Spoiler filter UI: `frontend/src/components/SpoilerFilter.tsx`
+- Graph UI: `frontend/src/components/GraphViewer.tsx` and `D3ForceGraph.tsx`
+
+If API response shapes change, update both `src/api/models.py` and `frontend/src/lib/api.ts`.
+
+## Quality Bar
+
+Before finishing backend or shared logic changes, run:
+
+```bash
+.venv/bin/python -m pytest -q
+```
+
+Before finishing frontend changes, run:
+
+```bash
+cd frontend && npm run lint
+cd frontend && npm run build
+```
+
+If a build/test fails because of missing external credentials, prefer making the code/test use explicit fallbacks or mocks. Unit tests should not require live Qdrant, Neo4j, Groq, Ollama, or Fandom.
+
+## Known Project-Specific Pitfalls
+
+- `Settings` loads `.env`; tests must stay isolated from it.
+- Qdrant is optional at query time only if `data/chunks/chunks_with_embeddings.jsonl` exists.
+- A clean clone has no local vector fallback until `scripts/03_chunk_and_embed.py` has run.
+- Neo4j relation lookups should degrade gracefully when credentials are absent or the DB is unreachable.
+- The spoiler filter is intentionally conservative for `history.*` sections with unknown arcs.
+- The SBS scraper is currently minimal; do not assume it extracts structured Q&A without checking `src/scraper/sbs_scraper.py`.
+- Keep README, `.env.example`, `pyproject.toml`, and `requirements.txt` aligned when dependencies or env vars change.
+
+## Coding Conventions
+
+- Prefer small, focused changes that match the existing module boundaries.
+- Keep fallback behavior explicit and tested.
+- Do not introduce network calls in constructors unless there is already a clear fallback or the object is only created inside an explicit command.
+- Avoid broad refactors while fixing pipeline or retrieval bugs.
+- Keep Pydantic response models strict with `extra="forbid"` unless there is a clear API compatibility reason.
+- Preserve French-facing UI text unless the user asks for a language change.
