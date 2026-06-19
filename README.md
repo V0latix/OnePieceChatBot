@@ -47,7 +47,7 @@ python scripts/05_test_rag.py --question "Quel est le fruit du demon de Trafalga
 5. API
 
 ```bash
-uvicorn src.api.main:app --reload
+PYTHONPATH=src uvicorn api.main:app --reload
 ```
 
 6. Frontend (dans un second terminal)
@@ -57,6 +57,57 @@ cd frontend
 npm install
 npm run dev
 ```
+
+## Production (backend perso + ngrok)
+
+Le frontend est deploye sur Vercel (`one-piece-chatbot.vercel.app`), mais le
+backend tourne en local et est expose au frontend via un tunnel ngrok. Si le
+Mac est redemarre ou le terminal ferme, l'appli en ligne retombe en erreur
+(CORS / 404) tant que le backend + ngrok ne sont pas relances.
+
+### Procedure de redemarrage
+
+1. **Backend** (terminal 1) — depuis la racine du repo :
+
+```bash
+source .venv/bin/activate
+PYTHONPATH=src uvicorn api.main:app --host 127.0.0.1 --port 8000
+```
+
+Attendre le message `Application startup complete.`
+
+2. **Tunnel ngrok** (terminal 2) — avec le domaine statique reserve :
+
+```bash
+ngrok http --url=overdistant-colloquial-leonora.ngrok-free.dev 8000
+```
+
+> Si ta version de ngrok ne connait pas `--url`, utilise
+> `--domain=overdistant-colloquial-leonora.ngrok-free.dev` a la place.
+
+Le frontend Vercel pointe vers ce domaine via la variable
+`NEXT_PUBLIC_API_BASE_URL` (configuree dans les env vars du projet Vercel). Le
+domaine ngrok doit donc rester identique a chaque redemarrage.
+
+### Verification
+
+```bash
+# Doit renvoyer {"status":"ok","chunks_count":...,"graph_nodes":...}
+curl -H "ngrok-skip-browser-warning: 1" \
+  https://overdistant-colloquial-leonora.ngrok-free.dev/api/health
+
+# Preflight CORS : doit renvoyer HTTP 200
+curl -o /dev/null -w "%{http_code}\n" -X OPTIONS \
+  https://overdistant-colloquial-leonora.ngrok-free.dev/api/ask/stream \
+  -H "Origin: https://one-piece-chatbot.vercel.app" \
+  -H "Access-Control-Request-Method: POST"
+```
+
+Une fois ces deux checks OK, le chat fonctionne sur `one-piece-chatbot.vercel.app`.
+
+> Note Vercel : le projet doit avoir **Root Directory = `frontend`** et aucun
+> override de Build/Install/Output Command (sinon la detection de Next.js
+> echoue avec `No Next.js version detected`).
 
 ## Donnees locales
 
