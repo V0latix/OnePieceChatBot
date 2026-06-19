@@ -40,11 +40,7 @@ class RAGService:
         self._ask_cache_keys: list[tuple[str, str | None]] = []
 
         self.entity_extractor = EntityExtractor.from_raw_documents(settings.raw_data_dir)
-        self.vector_store = (
-            QdrantVectorStore(settings.qdrant_url, settings.qdrant_api_key, settings.qdrant_collection)
-            if settings.qdrant_url and settings.qdrant_api_key
-            else None
-        )
+        self.vector_store = self._init_vector_store(settings)
         self._embedder: EmbeddingGenerator | None = None
         self._retriever: HybridRetriever | None = None
         self.reranker = WeightedReranker(
@@ -55,6 +51,25 @@ class RAGService:
         self.prompt_builder = PromptBuilder()
         self.generator = AnswerGenerator(settings, self.prompt_builder)
         self.graph_retriever = GraphRetriever(settings)
+
+    def _init_vector_store(self, settings: Settings) -> QdrantVectorStore | None:
+        """Construit le store Qdrant, ou None si le cluster est injoignable.
+
+        La construction touche le reseau (`_ensure_collection`). Si le cluster
+        a expire (Qdrant Cloud supprime les clusters inactifs), on degrade
+        proprement vers le fallback cosine local au lieu de crasher le service.
+        """
+        if not (settings.qdrant_url and settings.qdrant_api_key):
+            return None
+        try:
+            return QdrantVectorStore(
+                settings.qdrant_url, settings.qdrant_api_key, settings.qdrant_collection
+            )
+        except Exception as exc:  # noqa: BLE001 - degradation volontaire
+            self.logger.warning(
+                "Qdrant injoignable (%s): fallback sur l'index cosine local", exc
+            )
+            return None
 
     def _slugify(self, value: str) -> str:
         return _SLUG_RE.sub("_", value.lower()).strip("_")

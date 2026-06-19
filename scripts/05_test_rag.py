@@ -6,7 +6,7 @@ import argparse
 
 from config.settings import get_settings
 from processing.embedder import EmbeddingGenerator
-from processing.vector_store import SupabaseVectorStore
+from processing.vector_store import QdrantVectorStore
 from rag.entity_extractor import EntityExtractor
 from rag.generator import AnswerGenerator
 from rag.graph_retriever import GraphRetriever
@@ -30,8 +30,13 @@ def main() -> None:
     embedder = EmbeddingGenerator(settings.embedding_model)
 
     vector_store = None
-    if settings.supabase_url and settings.supabase_key:
-        vector_store = SupabaseVectorStore(settings.supabase_url, settings.supabase_key)
+    if settings.qdrant_url and settings.qdrant_api_key:
+        try:
+            vector_store = QdrantVectorStore(
+                settings.qdrant_url, settings.qdrant_api_key, settings.qdrant_collection
+            )
+        except Exception as exc:  # noqa: BLE001 - fallback index local
+            logger.warning("Qdrant injoignable (%s): fallback index cosine local", exc)
 
     retriever = HybridRetriever(
         settings=settings,

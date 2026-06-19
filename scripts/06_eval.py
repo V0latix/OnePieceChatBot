@@ -137,11 +137,14 @@ def run_evaluation(top_k: int = 5, verbose: bool = False) -> None:
     print("Chargement du pipeline...", end=" ", flush=True)
     t0 = time.time()
     embedder = EmbeddingGenerator(settings.embedding_model)
-    vector_store = (
-        QdrantVectorStore(settings.qdrant_url, settings.qdrant_api_key, settings.qdrant_collection)
-        if settings.qdrant_url and settings.qdrant_api_key
-        else None
-    )
+    vector_store = None
+    if settings.qdrant_url and settings.qdrant_api_key:
+        try:
+            vector_store = QdrantVectorStore(
+                settings.qdrant_url, settings.qdrant_api_key, settings.qdrant_collection
+            )
+        except Exception as exc:  # noqa: BLE001 - fallback index cosine local
+            logger.warning("Qdrant injoignable (%s): eval sur index cosine local", exc)
     retriever = HybridRetriever(settings=settings, embedder=embedder, vector_store=vector_store)
     reranker = WeightedReranker(
         vector_weight=settings.rerank_vector_weight,
