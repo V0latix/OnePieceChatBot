@@ -12,9 +12,30 @@ from pydantic import BaseModel, ConfigDict
 from config.settings import Settings
 from processing.embedder import EmbeddingGenerator
 from processing.vector_store import QdrantVectorStore
+from rag.noise import is_noise_entity as _is_noise_entity
+from rag.noise import is_noise_section as _is_noise_section
 
 
 _WORD_RE = re.compile(r"[a-zA-Z0-9']+")
+
+
+def _graph_match(entities: list[str], entity_name: str) -> bool:
+    """Match strict entite<->page pour le boost graphe.
+
+    Evite que "Zoro" matche "Volume Zoro" (l'ancien `in` sous-chaine). On exige
+    soit l'egalite exacte, soit qu'une entite multi-mots prefixe le titre
+    (ex: "Roronoa Zoro" matche "Roronoa Zoro" mais pas "Volume Zoro").
+    """
+    name = entity_name.lower().strip()
+    for entity in entities:
+        alias = entity.lower().strip()
+        if not alias:
+            continue
+        if name == alias:
+            return True
+        if " " in alias and name.startswith(alias):
+            return True
+    return False
 
 
 class EmbeddedChunk(BaseModel):
@@ -107,6 +128,8 @@ class HybridRetriever:
         for chunk in self.local_index:
             if filter_type and chunk.entity_type != filter_type:
                 continue
+            if _is_noise_section(chunk.section) or _is_noise_entity(chunk.entity_name):
+                continue
             similarity = self._cosine_similarity(query_embedding, chunk.embedding)
             scored.append(
                 RetrievalResult(
@@ -152,6 +175,7 @@ class HybridRetriever:
                 vector_score=float(row.similarity),
             )
             for row in rows
+            if not (_is_noise_section(row.section) or _is_noise_entity(row.entity_name))
         ]
 
     def retrieve(
@@ -176,12 +200,14 @@ class HybridRetriever:
         combined: dict[str, RetrievalResult] = {}
         for result in vector_results:
             result.keyword_score = self._keyword_score(query_terms, result.content)
-            if entities and any(entity.lower() in result.entity_name.lower() for entity in entities):
+            if entities and _graph_match(entities, result.entity_name):
                 result.graph_score = 1.0
             combined[result.chunk_id] = result
 
         # Ajout lexical pur si l'index local existe.
         for chunk in self.local_index:
+            if _is_noise_section(chunk.section) or _is_noise_entity(chunk.entity_name):
+                continue
             keyword_score = self._keyword_score(query_terms, chunk.content)
             if keyword_score <= 0:
                 continue
@@ -197,7 +223,7 @@ class HybridRetriever:
                 content=chunk.content,
                 source_url=chunk.source_url,
                 keyword_score=keyword_score,
-                graph_score=1.0 if any(entity.lower() in chunk.entity_name.lower() for entity in entities) else 0.0,
+                graph_score=1.0 if _graph_match(entities, chunk.entity_name) else 0.0,
             )
 
         results = list(combined.values())

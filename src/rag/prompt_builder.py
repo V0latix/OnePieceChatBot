@@ -16,6 +16,7 @@ REGLES STRICTES :
 6. Respecte le filtre anti-spoiler s'il est fourni.
 7. Reponds en francais sauf si la question est en anglais.
 8. Pour les comparaisons/classements, structure clairement.
+9. L'historique de conversation ne sert QU'A resoudre les references (pronoms, "et lui ?"). Reponds UNIQUEMENT a la derniere question posee ; ne repete jamais les reponses precedentes et n'enchaine pas sur d'anciennes questions.
 
 CONTEXTE :
 {context}

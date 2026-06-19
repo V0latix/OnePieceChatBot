@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from config.settings import get_settings
-from rag.retriever import HybridRetriever
+from rag.retriever import HybridRetriever, _graph_match, _is_noise_entity, _is_noise_section
 
 
 class DummyEmbedder:
@@ -63,3 +63,87 @@ def test_retriever_uses_local_index_and_scores_keyword(tmp_path) -> None:
     top = max(results, key=lambda row: row.vector_score)
     assert top.entity_name == "Monkey D. Luffy"
     assert any(row.keyword_score > 0 for row in results)
+
+
+# --- Fix A: filtrage des sections/pages de bruit -----------------------------
+
+
+def test_is_noise_section_flags_navigation():
+    assert _is_noise_section("site_navigation")
+    assert _is_noise_section("external_links")
+    assert _is_noise_section("references")
+    assert not _is_noise_section("overview")
+    assert not _is_noise_section("abilities_and_powers.devil_fruit")
+
+
+def test_is_noise_entity_flags_non_canonical_pages():
+    assert _is_noise_entity("Roronoa Zoro/Gallery")
+    assert _is_noise_entity("Roronoa Zoro/Misc.")
+    assert _is_noise_entity("Volume Zoro")
+    assert _is_noise_entity("Forum:Nightmare Luffy")
+    assert _is_noise_entity("Episode 492")
+    assert not _is_noise_entity("Roronoa Zoro")
+    assert not _is_noise_entity("Monkey D. Luffy")
+
+
+# --- Fix B: match strict entite <-> page -------------------------------------
+
+
+def test_graph_match_exact_and_multiword_prefix():
+    # Egalite exacte
+    assert _graph_match(["Roronoa Zoro"], "Roronoa Zoro")
+    # Entite multi-mots prefixant une (hypothetique) sous-page
+    assert _graph_match(["Roronoa Zoro"], "Roronoa Zoro/Misc.")
+
+
+def test_graph_match_rejects_single_word_substring():
+    # "Zoro" seul ne doit PAS matcher "Volume Zoro" (ancien bug du `in`)
+    assert not _graph_match(["Zoro"], "Volume Zoro")
+
+
+def test_retrieve_excludes_noise_pages_and_sections(tmp_path):
+    index_path = tmp_path / "chunks_with_embeddings.jsonl"
+    rows = [
+        {
+            "chunk_id": "zoro__overview__001",
+            "entity_id": "zoro",
+            "entity_name": "Roronoa Zoro",
+            "entity_type": "character",
+            "section": "overview",
+            "content": "Roronoa Zoro est un epeiste de l'equipage de Luffy.",
+            "categories": ["Characters"],
+            "related_entities": [],
+            "token_count": 12,
+            "source_url": "https://onepiece.fandom.com/wiki/Roronoa_Zoro",
+            "embedding": [1.0, 0.0],
+        },
+        {
+            "chunk_id": "volzoro__nav__001",
+            "entity_id": "volume_zoro",
+            "entity_name": "Volume Zoro",
+            "entity_type": "unknown",
+            "section": "site_navigation",
+            "content": "Roronoa Zoro navigation menu links.",
+            "categories": [],
+            "related_entities": [],
+            "token_count": 8,
+            "source_url": "https://onepiece.fandom.com/wiki/Volume_Zoro",
+            "embedding": [1.0, 0.0],
+        },
+    ]
+    with index_path.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row))
+            handle.write("\n")
+
+    retriever = HybridRetriever(
+        settings=get_settings(),
+        embedder=DummyEmbedder(),
+        vector_store=None,
+        local_embeddings_path=index_path,
+    )
+    results = retriever.retrieve("Qui est Zoro ?", entities=["Roronoa Zoro", "Zoro"], top_k=5)
+
+    names = {row.entity_name for row in results}
+    assert "Roronoa Zoro" in names
+    assert "Volume Zoro" not in names  # page de bruit exclue

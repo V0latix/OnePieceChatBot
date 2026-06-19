@@ -6,6 +6,8 @@ import json
 import re
 from pathlib import Path
 
+from rag.noise import is_noise_entity
+
 
 _NORMALIZE_RE = re.compile(r"[^a-z0-9\s]")
 
@@ -50,7 +52,9 @@ class EntityExtractor:
         for path in sorted(raw_dir.glob("*.json")):
             payload = json.loads(path.read_text(encoding="utf-8"))
             title = payload.get("title")
-            if isinstance(title, str):
+            # Exclut les pages non-canoniques (Volume/SBS/Forum/Gallery...) pour
+            # eviter que "Zoro" resolve vers "Volume Zoro" lors d'une collision d'alias.
+            if isinstance(title, str) and not is_noise_entity(title):
                 entities.append(title)
         return cls(entities)
 
