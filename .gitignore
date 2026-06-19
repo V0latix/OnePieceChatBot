@@ -27,7 +27,6 @@ data/graph/*
 !data/chunks/.gitkeep
 !data/graph/.gitkeep
 
-CLAUDE.md
 .claude
 /_bmad
 /_bmad-output
