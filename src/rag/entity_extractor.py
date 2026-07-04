@@ -6,7 +6,7 @@ import json
 import re
 from pathlib import Path
 
-from rag.noise import is_noise_entity
+from rag.noise import is_alias_stopword, is_noise_entity
 
 
 _NORMALIZE_RE = re.compile(r"[^a-z0-9\s]")
@@ -32,12 +32,14 @@ class EntityExtractor:
             alias_map[normalized] = entity
 
             words = [word for word in normalized.split(" ") if len(word) >= 4]
-            if words:
+            if words and not is_alias_stopword(words[-1]):
                 alias_map[words[-1]] = entity
 
             # Alias court utile pour les questions naturelles (ex: "Law", "Zoro").
+            # On exclut les mots trop generiques ("who" -> "Who's-Who") qui polluent
+            # le retrieval et les signaux graphe.
             all_words = [word for word in normalized.split(" ") if word]
-            if all_words and len(all_words[-1]) >= 3:
+            if all_words and len(all_words[-1]) >= 3 and not is_alias_stopword(all_words[-1]):
                 alias_map[all_words[-1]] = entity
 
             compact = normalized.replace(" ", "")

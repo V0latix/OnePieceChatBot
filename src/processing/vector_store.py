@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 
 from pydantic import BaseModel, ConfigDict
@@ -37,6 +38,7 @@ class VectorSearchResult(BaseModel):
     entity_type: str
     section: str
     content: str
+    categories: list[str] = []
     similarity: float
 
 
@@ -45,7 +47,9 @@ class QdrantVectorStore:
 
     def __init__(self, qdrant_url: str, qdrant_api_key: str, collection_name: str = "op_chunks") -> None:
         self.collection_name = collection_name
-        self.client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key)
+        # timeout genereux: le cluster gratuit (froid) est lent sur les upserts de
+        # batch; une search saine repond en <1s, seul un upload lourd en profite.
+        self.client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key, timeout=60)
         self._cb = CircuitBreaker("qdrant", failure_threshold=3, recovery_timeout=60.0)
         self._ensure_collection()
 
@@ -83,21 +87,22 @@ class QdrantVectorStore:
             for chunk, embedding in zip(chunks, embeddings, strict=True)
         ]
 
-        # Upload par batch de 100 pour eviter les timeouts
-        batch_size = 100
-        self._cb.before_call()
-        try:
-            for i in range(0, len(points), batch_size):
-                self.client.upsert(
-                    collection_name=self.collection_name,
-                    points=points[i : i + batch_size],
-                )
-            self._cb.on_success()
-        except CircuitBreakerOpen:
-            raise
-        except Exception as exc:
-            self._cb.on_failure()
-            raise exc
+        # Upload par batch de 50 avec retry: le cluster gratuit froid renvoie des
+        # read-timeouts transitoires. Upsert idempotent (UUID deterministes), donc
+        # retry sans risque de doublon. Pas de circuit breaker ici (fait pour le
+        # chemin requete, pas le bulk qui doit persister).
+        batch_size = 50
+        max_attempts = 4
+        for i in range(0, len(points), batch_size):
+            batch = points[i : i + batch_size]
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    self.client.upsert(collection_name=self.collection_name, points=batch)
+                    break
+                except Exception as exc:
+                    if attempt == max_attempts:
+                        raise exc
+                    time.sleep(5 * attempt)  # backoff: laisse le cluster chauffer
 
     def search(
         self,
@@ -118,9 +123,10 @@ class QdrantVectorStore:
             )
 
         try:
-            hits = self.client.search(
+            # qdrant-client >= 1.14 a supprime .search() au profit de .query_points().
+            response = self.client.query_points(
                 collection_name=self.collection_name,
-                query_vector=query_embedding,
+                query=query_embedding,
                 limit=match_count,
                 query_filter=query_filter,
                 with_payload=True,
@@ -132,9 +138,10 @@ class QdrantVectorStore:
                     entity_type=hit.payload.get("entity_type", ""),
                     section=hit.payload.get("section", ""),
                     content=hit.payload.get("content", ""),
+                    categories=hit.payload.get("categories", []),
                     similarity=hit.score,
                 )
-                for hit in hits
+                for hit in response.points
             ]
             self._cb.on_success()
             return results

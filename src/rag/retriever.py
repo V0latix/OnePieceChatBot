@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 from config.settings import Settings
 from processing.embedder import EmbeddingGenerator
 from processing.vector_store import QdrantVectorStore
+from rag.noise import is_noise_categories as _is_noise_categories
 from rag.noise import is_noise_entity as _is_noise_entity
 from rag.noise import is_noise_section as _is_noise_section
 
@@ -128,7 +129,11 @@ class HybridRetriever:
         for chunk in self.local_index:
             if filter_type and chunk.entity_type != filter_type:
                 continue
-            if _is_noise_section(chunk.section) or _is_noise_entity(chunk.entity_name):
+            if (
+                _is_noise_section(chunk.section)
+                or _is_noise_entity(chunk.entity_name)
+                or _is_noise_categories(chunk.categories)
+            ):
                 continue
             similarity = self._cosine_similarity(query_embedding, chunk.embedding)
             scored.append(
@@ -175,7 +180,11 @@ class HybridRetriever:
                 vector_score=float(row.similarity),
             )
             for row in rows
-            if not (_is_noise_section(row.section) or _is_noise_entity(row.entity_name))
+            if not (
+                _is_noise_section(row.section)
+                or _is_noise_entity(row.entity_name)
+                or _is_noise_categories(row.categories)
+            )
         ]
 
     def retrieve(
@@ -191,9 +200,13 @@ class HybridRetriever:
 
         query_embedding = self.embedder.embed_query(question)
 
-        vector_results = self._remote_vector_search(query_embedding, filter_type, top_k)
+        # Sur-echantillonne dans les deux chemins : le filtrage bruit/categorie
+        # s'applique APRES le fetch, donc il faut de la marge pour qu'il reste
+        # assez de bons resultats a reranker.
+        candidate_k = max(top_k * 3, top_k)
+        vector_results = self._remote_vector_search(query_embedding, filter_type, candidate_k)
         if not vector_results:
-            vector_results = self._local_vector_search(query_embedding, filter_type, max(top_k * 3, top_k))
+            vector_results = self._local_vector_search(query_embedding, filter_type, candidate_k)
 
         query_terms = set(term.lower() for term in _WORD_RE.findall(question) if len(term) >= 3)
 
@@ -206,7 +219,11 @@ class HybridRetriever:
 
         # Ajout lexical pur si l'index local existe.
         for chunk in self.local_index:
-            if _is_noise_section(chunk.section) or _is_noise_entity(chunk.entity_name):
+            if (
+                _is_noise_section(chunk.section)
+                or _is_noise_entity(chunk.entity_name)
+                or _is_noise_categories(chunk.categories)
+            ):
                 continue
             keyword_score = self._keyword_score(query_terms, chunk.content)
             if keyword_score <= 0:
