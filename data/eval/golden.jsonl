@@ -1,0 +1,30 @@
+# Golden set — eval retrieval + generation du RAG One Piece.
+# Un objet JSON par ligne. Lignes vides ou commencant par '#' ignorees.
+# Champs : question | expected_entities (au moins une doit etre retrouvee) | primary (entite principale) | category
+# Pour agrandir : ajoute une ligne. Categories : factual, multi-hop, global, canon, spoiler.
+# Regle : n'ajoute que des entites que le retrieval DEVRAIT remonter (pas de reponse inventee).
+{"question": "Qui est le capitaine des Mugiwara no Ichimi ?", "expected_entities": ["Monkey D. Luffy", "Luffy", "Straw Hat Pirates"], "primary": "Luffy", "category": "factual"}
+{"question": "Quel est le fruit du demon de Luffy ?", "expected_entities": ["Gomu Gomu no Mi", "Luffy", "Hito Hito no Mi"], "primary": "Luffy", "category": "factual"}
+{"question": "Qui est le chirurgien de l'equipe de Luffy ?", "expected_entities": ["Tony Tony Chopper", "Chopper"], "primary": "Chopper", "category": "factual"}
+{"question": "Quel est le vrai nom de Roronoa Zoro ?", "expected_entities": ["Roronoa Zoro", "Zoro"], "primary": "Zoro", "category": "factual"}
+{"question": "Quelle organisation est dirigee par le Gorosei ?", "expected_entities": ["World Government", "Gorosei", "Marines"], "primary": "World Government", "category": "factual"}
+{"question": "Qui a mange le Mera Mera no Mi ?", "expected_entities": ["Portgas D. Ace", "Ace", "Sabo"], "primary": "Ace", "category": "factual"}
+{"question": "Quel est le navire des Mugiwara ?", "expected_entities": ["Thousand Sunny", "Going Merry", "Straw Hat Pirates"], "primary": "Thousand Sunny", "category": "factual"}
+{"question": "Qui est l'amiral Aokiji ?", "expected_entities": ["Kuzan", "Aokiji", "Marines"], "primary": "Kuzan", "category": "factual"}
+{"question": "Dans quel arc se deroule la guerre de Marineford ?", "expected_entities": ["Marineford", "Whitebeard", "Ace"], "primary": "Marineford", "category": "factual"}
+{"question": "Quel est le reve de Nami ?", "expected_entities": ["Nami"], "primary": "Nami", "category": "factual"}
+{"question": "Qui est le pere de Monkey D. Luffy ?", "expected_entities": ["Monkey D. Dragon", "Dragon", "Luffy"], "primary": "Dragon", "category": "factual"}
+{"question": "Quelle est la technique signature de Sanji ?", "expected_entities": ["Sanji"], "primary": "Sanji", "category": "factual"}
+{"question": "Qui a fonde les Seven Warlords of the Sea ?", "expected_entities": ["Shichibukai", "Seven Warlords", "World Government"], "primary": "Shichibukai", "category": "factual"}
+{"question": "Quel est le groupe de Whitebeard ?", "expected_entities": ["Whitebeard Pirates", "Edward Newgate", "Whitebeard"], "primary": "Whitebeard", "category": "factual"}
+{"question": "Qui est Robin dans l'equipage des Mugiwara ?", "expected_entities": ["Nico Robin", "Robin"], "primary": "Robin", "category": "factual"}
+{"question": "Comment Ace est-il lie a Luffy ?", "expected_entities": ["Portgas D. Ace", "Ace", "Luffy", "Sabo"], "primary": "Ace", "category": "multi-hop"}
+{"question": "Qui a entraine Luffy pendant les deux ans d'ellipse ?", "expected_entities": ["Silvers Rayleigh", "Rayleigh", "Luffy"], "primary": "Rayleigh", "category": "multi-hop"}
+{"question": "Quelle est la relation entre Sabo et Luffy ?", "expected_entities": ["Sabo", "Luffy", "Ace"], "primary": "Sabo", "category": "multi-hop"}
+{"question": "Quels sont les membres de l'equipage de Luffy ?", "expected_entities": ["Straw Hat Pirates", "Zoro", "Nami", "Sanji", "Luffy"], "primary": "Straw Hat Pirates", "category": "global"}
+{"question": "Resume l'arc de Marineford.", "expected_entities": ["Marineford", "Whitebeard", "Ace", "Luffy"], "primary": "Marineford", "category": "global"}
+{"question": "Comment fonctionne le Haki ?", "expected_entities": ["Haki"], "primary": "Haki", "category": "global"}
+{"question": "Qui est Shanks le Roux ?", "expected_entities": ["Shanks", "Red Hair Pirates"], "primary": "Shanks", "category": "canon"}
+{"question": "Qui est Trafalgar Law ?", "expected_entities": ["Trafalgar D. Water Law", "Trafalgar Law", "Law", "Heart Pirates"], "primary": "Law", "category": "canon"}
+{"question": "Qui est le pere de Portgas D. Ace ?", "expected_entities": ["Gol D. Roger", "Roger", "Portgas D. Ace", "Ace"], "primary": "Roger", "category": "spoiler"}
+{"question": "Quel fruit du demon possede Marshall D. Teach ?", "expected_entities": ["Marshall D. Teach", "Blackbeard", "Yami Yami no Mi", "Gura Gura no Mi"], "primary": "Blackbeard", "category": "spoiler"}

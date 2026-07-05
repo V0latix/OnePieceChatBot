@@ -21,96 +21,15 @@ from pathlib import Path
 # Ajout du dossier src au path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+import eval_common
+
 from config.settings import get_settings
 from processing.embedder import EmbeddingGenerator
 from processing.vector_store import QdrantVectorStore
 from rag.entity_extractor import EntityExtractor
-from rag.reranker import WeightedReranker
+from rag.reranker import RRFReranker
 from rag.retriever import HybridRetriever
 from utils.logger import configure_logging, get_logger
-
-
-# ---------------------------------------------------------------------------
-# Jeu de questions de reference One Piece
-# Chaque entree : question, entites_attendues (au moins une doit etre recuperee)
-# ---------------------------------------------------------------------------
-GOLD_QUESTIONS: list[dict] = [
-    {
-        "question": "Qui est le capitaine des Mugiwara no Ichimi ?",
-        "expected_entities": ["Monkey D. Luffy", "Luffy", "Straw Hat Pirates"],
-        "primary": "Luffy",
-    },
-    {
-        "question": "Quel est le fruit du demon de Luffy ?",
-        "expected_entities": ["Gomu Gomu no Mi", "Luffy", "Hito Hito no Mi"],
-        "primary": "Luffy",
-    },
-    {
-        "question": "Qui est le chirurgien de l'equipe de Luffy ?",
-        "expected_entities": ["Tony Tony Chopper", "Chopper"],
-        "primary": "Chopper",
-    },
-    {
-        "question": "Quel est le vrai nom de Roronoa Zoro ?",
-        "expected_entities": ["Roronoa Zoro", "Zoro"],
-        "primary": "Zoro",
-    },
-    {
-        "question": "Quelle organisation est dirigee par le Gorosei ?",
-        "expected_entities": ["World Government", "Gorosei", "Marines"],
-        "primary": "World Government",
-    },
-    {
-        "question": "Qui a mange le Mera Mera no Mi ?",
-        "expected_entities": ["Portgas D. Ace", "Ace", "Sabo"],
-        "primary": "Ace",
-    },
-    {
-        "question": "Quel est le navire des Mugiwara ?",
-        "expected_entities": ["Thousand Sunny", "Going Merry", "Straw Hat Pirates"],
-        "primary": "Thousand Sunny",
-    },
-    {
-        "question": "Qui est l'amiral Aokiji ?",
-        "expected_entities": ["Kuzan", "Aokiji", "Marines"],
-        "primary": "Kuzan",
-    },
-    {
-        "question": "Dans quel arc se deroule la guerre de Marineford ?",
-        "expected_entities": ["Marineford", "Whitebeard", "Ace"],
-        "primary": "Marineford",
-    },
-    {
-        "question": "Quel est le reve de Nami ?",
-        "expected_entities": ["Nami"],
-        "primary": "Nami",
-    },
-    {
-        "question": "Qui est le pere de Monkey D. Luffy ?",
-        "expected_entities": ["Monkey D. Dragon", "Dragon", "Luffy"],
-        "primary": "Dragon",
-    },
-    {
-        "question": "Quelle est la technique signature de Sanji ?",
-        "expected_entities": ["Sanji"],
-        "primary": "Sanji",
-    },
-    {
-        "question": "Qui a fonde les Seven Warlords of the Sea ?",
-        "expected_entities": ["Shichibukai", "Seven Warlords", "World Government"],
-        "primary": "Shichibukai",
-    },
-    {
-        "question": "Quel est le groupe de Whitebeard ?",
-        "expected_entities": ["Whitebeard Pirates", "Edward Newgate", "Whitebeard"],
-        "primary": "Whitebeard",
-    },
-    {
-        "question": "Qui est Robin dans l'equipage des Mugiwara ?",
-        "expected_entities": ["Nico Robin", "Robin"],
-        "primary": "Robin",
-    },
-]
 
 
 @dataclass
@@ -128,9 +47,10 @@ def run_evaluation(top_k: int = 5, verbose: bool = False) -> None:
     logger = get_logger(__name__)
 
     settings = get_settings()
+    golden = eval_common.load_golden(settings.data_dir / "eval" / "golden.jsonl")
     print(f"\n{'='*60}")
     print(f"  One Piece RAG — Evaluation retrieval (top-K={top_k})")
-    print(f"  Questions: {len(GOLD_QUESTIONS)}")
+    print(f"  Questions: {len(golden)}")
     print(f"{'='*60}\n")
 
     # Initialisation du pipeline
@@ -146,17 +66,13 @@ def run_evaluation(top_k: int = 5, verbose: bool = False) -> None:
         except Exception as exc:  # noqa: BLE001 - fallback index cosine local
             logger.warning("Qdrant injoignable (%s): eval sur index cosine local", exc)
     retriever = HybridRetriever(settings=settings, embedder=embedder, vector_store=vector_store)
-    reranker = WeightedReranker(
-        vector_weight=settings.rerank_vector_weight,
-        graph_weight=settings.rerank_graph_weight,
-        keyword_weight=settings.rerank_keyword_weight,
-    )
+    reranker = RRFReranker(k=settings.rerank_rrf_k, graph_boost=settings.rerank_graph_boost)
     entity_extractor = EntityExtractor.from_raw_documents(settings.raw_data_dir)
     print(f"OK ({time.time() - t0:.1f}s)\n")
 
     results: list[EvalResult] = []
 
-    for i, gold in enumerate(GOLD_QUESTIONS, 1):
+    for i, gold in enumerate(golden, 1):
         question = gold["question"]
         expected = [e.lower() for e in gold["expected_entities"]]
         primary = gold["primary"].lower()
@@ -187,7 +103,7 @@ def run_evaluation(top_k: int = 5, verbose: bool = False) -> None:
 
         status = "HIT" if hit else ("RECALL" if recall else "MISS")
         if verbose or not hit:
-            print(f"[{i:02d}/{len(GOLD_QUESTIONS)}] {status:6s} | {question[:55]:<55} | top3: {result.retrieved_entities}")
+            print(f"[{i:02d}/{len(golden)}] {status:6s} | {question[:55]:<55} | top3: {result.retrieved_entities}")
 
     # Metriques globales
     n = len(results)

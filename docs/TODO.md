@@ -142,7 +142,7 @@ rapide que llama.cpp** sur workloads d'embedding Apple Silicon.
 
 ## 5. Roadmap minimale suggérée
 
-1. **Golden set + RAGAS** (baseline du pipeline actuel 0.4/0.4/0.2)
+1. ✅ **Golden set + eval** (`data/eval/golden.jsonl`, `scripts/06_eval.py` réparé, `scripts/07_eval_ragas.py`) — fait, variante *lean* (juge Groq, sans dépendance ragas)
 2. ✅ **RRF + BM25** (`reranker.py` / `retriever.py`) — fait
 3. **Contextual retrieval** (`chunker.py` / `embedder.py`)
 4. **bge-reranker-v2-m3** en 2e étage
@@ -155,5 +155,9 @@ Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriqu
 > vrai BM25 (`retriever.py`), grounding des citations (`prompt_builder.py`),
 > fuzzy entités via `difflib` (`entity_extractor.py`), modèle Groq à jour
 > (`settings.py`). Confiance = cosinus moyen × ratio de grounding.
-> Restent ouverts : §0 golden set/RAGAS, §1 contextual retrieval + cross-encoder,
+> **Fait (mesure) :** golden set JSONL (`data/eval/golden.jsonl`, 25 Q taggées
+> factual/multi-hop/global/canon/spoiler), `06_eval.py` réparé (Hit@K/Recall@K sur RRF),
+> `07_eval_ragas.py` (faithfulness + answer_relevancy via juge Groq, sans lib ragas).
+> Baseline actuel : **Hit@5 64 %, Recall@5 88 %** ; faithfulness ~0.5, relevancy ~0.83.
+> Restent ouverts : §1 contextual retrieval + cross-encoder,
 > §2 PPR/query-transform/RAPTOR, §3 ANN local.
