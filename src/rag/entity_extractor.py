@@ -16,8 +16,11 @@ _NORMALIZE_RE = re.compile(r"[^a-z0-9\s]")
 class EntityExtractor:
     """Extractor rule-based base sur un dictionnaire d'entites connues."""
 
-    def __init__(self, entities: list[str]) -> None:
+    def __init__(self, entities: list[str], importance: dict[str, int] | None = None) -> None:
         self.entities = list(dict.fromkeys(entity.strip() for entity in entities if entity.strip()))
+        # Prior d'importance (ex: nb de related_entities) pour arbitrer les collisions
+        # d'alias : "luffy" -> "Monkey D. Luffy" (145) plutot que "Nightmare Luffy" (1).
+        self._importance = importance or {}
         self._alias_to_entity = self._build_alias_map(self.entities)
 
     @staticmethod
@@ -26,32 +29,43 @@ class EntityExtractor:
         normalized = re.sub(r"\s+", " ", normalized).strip()
         return normalized
 
+    def _assign(self, alias_map: dict[str, str], alias: str, entity: str) -> None:
+        """Pose alias->entity, en gardant l'entite la plus importante en cas de collision."""
+        existing = alias_map.get(alias)
+        if existing is None or self._importance.get(entity, 0) > self._importance.get(existing, 0):
+            alias_map[alias] = entity
+
     def _build_alias_map(self, entities: list[str]) -> dict[str, str]:
         alias_map: dict[str, str] = {}
+        # Passe 1 : titres complets normalises (cles canoniques, jamais ecrasees par un alias court).
+        for entity in entities:
+            self._assign(alias_map, self._normalize(entity), entity)
+
+        # Passe 2 : alias courts + forme compacte, arbitres par l'importance.
         for entity in entities:
             normalized = self._normalize(entity)
-            alias_map[normalized] = entity
 
             words = [word for word in normalized.split(" ") if len(word) >= 4]
             if words and not is_alias_stopword(words[-1]):
-                alias_map[words[-1]] = entity
+                self._assign(alias_map, words[-1], entity)
 
             # Alias court utile pour les questions naturelles (ex: "Law", "Zoro").
             # On exclut les mots trop generiques ("who" -> "Who's-Who") qui polluent
             # le retrieval et les signaux graphe.
             all_words = [word for word in normalized.split(" ") if word]
             if all_words and len(all_words[-1]) >= 3 and not is_alias_stopword(all_words[-1]):
-                alias_map[all_words[-1]] = entity
+                self._assign(alias_map, all_words[-1], entity)
 
             compact = normalized.replace(" ", "")
             if len(compact) >= 6:
-                alias_map[compact] = entity
+                self._assign(alias_map, compact, entity)
         return alias_map
 
     @classmethod
     def from_raw_documents(cls, raw_dir: Path) -> "EntityExtractor":
         """Construit l'extractor depuis les JSON de data/raw."""
         entities: list[str] = []
+        importance: dict[str, int] = {}
         for path in sorted(raw_dir.glob("*.json")):
             payload = json.loads(path.read_text(encoding="utf-8"))
             title = payload.get("title")
@@ -59,7 +73,10 @@ class EntityExtractor:
             # eviter que "Zoro" resolve vers "Volume Zoro" lors d'une collision d'alias.
             if isinstance(title, str) and not is_noise_entity(title):
                 entities.append(title)
-        return cls(entities)
+                # Prior d'importance = nb de related_entities (les pages canoniques des
+                # personnages principaux en ont des centaines, les pages filler ~1).
+                importance[title] = len(payload.get("related_entities", []) or [])
+        return cls(entities, importance=importance)
 
     def extract(self, question: str, max_entities: int = 5) -> list[str]:
         """Retourne les entites detectees dans la question."""
@@ -92,4 +109,7 @@ class EntityExtractor:
                     matches.append(self._alias_to_entity[close[0]])
 
         deduped = list(dict.fromkeys(matches))
+        # Tri stable par importance decroissante : le cap max_entities garde les
+        # entites canoniques plutot que des collisions residuelles.
+        deduped.sort(key=lambda entity: self._importance.get(entity, 0), reverse=True)
         return deduped[:max_entities]

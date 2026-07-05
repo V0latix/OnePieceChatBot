@@ -77,6 +77,7 @@ def run_evaluation(top_k: int = 5, verbose: bool = False) -> None:
     print(f"OK ({time.time() - t0:.1f}s)  [cross-encoder: {ce_state}]\n")
 
     results: list[EvalResult] = []
+    seed_hits = 0  # questions dont l'extraction seed >=1 entite attendue
 
     for i, gold in enumerate(golden, 1):
         question = gold["question"]
@@ -84,6 +85,8 @@ def run_evaluation(top_k: int = 5, verbose: bool = False) -> None:
         primary = gold["primary"].lower()
 
         entities = entity_extractor.extract(question)
+        if any(exp in ent.lower() or ent.lower() in exp for ent in entities for exp in expected):
+            seed_hits += 1
         raw = retriever.retrieve(question=question, entities=entities, top_k=top_k * 3)
         reranked = reranker.rerank(raw)
         if cross_encoder:
@@ -123,6 +126,7 @@ def run_evaluation(top_k: int = 5, verbose: bool = False) -> None:
     print(f"\n{'='*60}")
     print(f"  RESULTATS (n={n}, top-K={top_k})")
     print(f"{'='*60}")
+    print(f"  Seed accuracy (extraction)    : {seed_hits / n:.1%}  ({seed_hits}/{n})")
     print(f"  Hit@{top_k}    (entite principale) : {hit_rate:.1%}  ({sum(r.hit for r in results)}/{n})")
     print(f"  Recall@{top_k} (au moins 1 attendue): {recall_rate:.1%}  ({sum(r.recall for r in results)}/{n})")
     print(f"  Score moyen (hits)            : {avg_score:.3f}")
