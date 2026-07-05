@@ -81,6 +81,7 @@ class RetrievalResult(BaseModel):
     keyword_score: float = 0.0
     graph_score: float = 0.0
     final_score: float = 0.0
+    rerank_score: float = 0.0  # score cross-encoder (2e etage), 0 si desactive
 
 
 class HybridRetriever:

@@ -17,7 +17,7 @@ from rag.entity_extractor import EntityExtractor
 from rag.generator import AnswerGenerator
 from rag.graph_retriever import GraphRetriever
 from rag.prompt_builder import PromptBuilder, grounded_ratio
-from rag.reranker import RRFReranker
+from rag.reranker import CrossEncoderReranker, RRFReranker
 from rag.retriever import HybridRetriever, RetrievalResult
 from rag.spoiler_filter import filter_by_spoiler_limit
 from utils.logger import configure_logging, get_logger
@@ -47,6 +47,8 @@ class RAGService:
             k=settings.rerank_rrf_k,
             graph_boost=settings.rerank_graph_boost,
         )
+        # Cross-encoder 2e etage : lazy (charge un modele lourd au 1er appel).
+        self._cross_encoder: CrossEncoderReranker | None = None
         self.prompt_builder = PromptBuilder()
         self.generator = AnswerGenerator(settings, self.prompt_builder)
         self.graph_retriever = GraphRetriever(settings)
@@ -95,6 +97,17 @@ class RAGService:
             )
         return self._retriever
 
+    def _rerank(self, query: str, results: list[RetrievalResult]) -> list[RetrievalResult]:
+        """RRF puis, si active, cross-encoder sur le top-N (charge a la demande)."""
+        reranked = self.reranker.rerank(results)
+        if self.settings.rerank_cross_encoder:
+            if self._cross_encoder is None:
+                self._cross_encoder = CrossEncoderReranker(self.settings.cross_encoder_model)
+            reranked = self._cross_encoder.rerank(
+                query, reranked, self.settings.rerank_candidates
+            )
+        return reranked
+
     def _cache_get(self, key: tuple[str, str | None]) -> AskResponse | None:
         return self._ask_cache.get(key)
 
@@ -127,7 +140,7 @@ class RAGService:
             entities=entities,
             top_k=max(self.settings.retrieval_top_k * 3, self.settings.retrieval_top_k),
         )
-        reranked = self.reranker.rerank(retrieval_results)
+        reranked = self._rerank(question, retrieval_results)
         reranked = filter_by_spoiler_limit(reranked, spoiler_limit_arc)
         top_results = reranked[: self.settings.retrieval_top_k]
 
@@ -184,7 +197,7 @@ class RAGService:
             entities=entities,
             top_k=max(self.settings.retrieval_top_k * 3, self.settings.retrieval_top_k),
         )
-        reranked = self.reranker.rerank(retrieval_results)
+        reranked = self._rerank(question, retrieval_results)
         reranked = filter_by_spoiler_limit(reranked, spoiler_limit_arc)
         top_results = reranked[: self.settings.retrieval_top_k]
 
@@ -258,7 +271,7 @@ class RAGService:
             filter_type=entity_type,
             top_k=max(self.settings.retrieval_top_k * 3, self.settings.retrieval_top_k),
         )
-        reranked = self.reranker.rerank(results)
+        reranked = self._rerank(query, results)
         reranked = filter_by_spoiler_limit(reranked, spoiler_limit_arc)
         return reranked[: self.settings.retrieval_top_k]
 

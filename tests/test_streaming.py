@@ -19,6 +19,7 @@ def _make_service() -> RAGService:
         neo4j_user=None,
         neo4j_password=None,
         groq_api_key=None,
+        rerank_cross_encoder=False,  # isole du modele lourd, meme si .env l'active
     )
     return RAGService(settings)
 

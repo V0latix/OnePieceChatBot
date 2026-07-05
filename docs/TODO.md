@@ -145,7 +145,7 @@ rapide que llama.cpp** sur workloads d'embedding Apple Silicon.
 1. ✅ **Golden set + eval** (`data/eval/golden.jsonl`, `scripts/06_eval.py` réparé, `scripts/07_eval_ragas.py`) — fait, variante *lean* (juge Groq, sans dépendance ragas)
 2. ✅ **RRF + BM25** (`reranker.py` / `retriever.py`) — fait
 3. **Contextual retrieval** (`chunker.py` / `embedder.py`)
-4. **bge-reranker-v2-m3** en 2e étage
+4. ✅ **bge-reranker-v2-m3** en 2e étage (`CrossEncoderReranker`, opt-in `RERANK_CROSS_ENCODER=1`) — fait
 5. **PPR graphe** (`graph_retriever.py`)
 6. **Résumés RAPTOR + community summaries** (offline)
 
@@ -159,5 +159,9 @@ Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriqu
 > factual/multi-hop/global/canon/spoiler), `06_eval.py` réparé (Hit@K/Recall@K sur RRF),
 > `07_eval_ragas.py` (faithfulness + answer_relevancy via juge Groq, sans lib ragas).
 > Baseline actuel : **Hit@5 64 %, Recall@5 88 %** ; faithfulness ~0.5, relevancy ~0.83.
-> Restent ouverts : §1 contextual retrieval + cross-encoder,
+> **Fait (cross-encoder §4) :** `CrossEncoderReranker` (bge-reranker-v2-m3) 2e étage,
+> opt-in `RERANK_CROSS_ENCODER=1`, dégradation gracieuse vers RRF si modèle absent.
+> Mesure A/B (n=10) : la métrique retrieval par nom d'entité est **aveugle** (Hit@5 plat),
+> mais la **génération** progresse nettement — faithfulness 0.50→0.63, relevancy 0.56→0.81.
+> Verdict : garder, activer en prod. Restent ouverts : §1 contextual retrieval,
 > §2 PPR/query-transform/RAPTOR, §3 ANN local.

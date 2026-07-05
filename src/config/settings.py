@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     rerank_rrf_k: int = Field(default=60, alias="RERANK_RRF_K")
     rerank_graph_boost: float = Field(default=1.0, alias="RERANK_GRAPH_BOOST")
 
+    # Cross-encoder (2e etage) : reordonne le top-N du RRF via (query, chunk).
+    # OFF par defaut ; activer via RERANK_CROSS_ENCODER=1 (telecharge le modele au 1er appel).
+    rerank_cross_encoder: bool = Field(default=False, alias="RERANK_CROSS_ENCODER")
+    cross_encoder_model: str = Field(default="BAAI/bge-reranker-v2-m3", alias="CROSS_ENCODER_MODEL")
+    rerank_candidates: int = Field(default=30, alias="RERANK_CANDIDATES")
+
     data_dir: Path = Path("data")
     raw_data_dir: Path = Path("data/raw")
     processed_data_dir: Path = Path("data/processed")
@@ -74,6 +80,8 @@ class Settings(BaseSettings):
             raise ValueError("Le nombre de retries doit etre >= 1")
         if self.rerank_rrf_k <= 0:
             raise ValueError("RERANK_RRF_K doit etre strictement positif")
+        if self.rerank_candidates <= 0:
+            raise ValueError("RERANK_CANDIDATES doit etre strictement positif")
         return self
 
     def ensure_directories(self) -> None:
