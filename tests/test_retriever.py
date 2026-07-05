@@ -147,3 +147,43 @@ def test_retrieve_excludes_noise_pages_and_sections(tmp_path):
     names = {row.entity_name for row in results}
     assert "Roronoa Zoro" in names
     assert "Volume Zoro" not in names  # page de bruit exclue
+
+
+# --- BM25 : le terme rare doit primer sur le terme frequent -------------------
+
+
+def test_bm25_rewards_rare_term(tmp_path):
+    index_path = tmp_path / "chunks_with_embeddings.jsonl"
+    # "haki" n'apparait que dans un doc (rare, IDF eleve) ; "pirate" partout.
+    rows = [
+        {
+            "chunk_id": f"c{i}",
+            "entity_id": f"e{i}",
+            "entity_name": f"Perso {i}",
+            "entity_type": "character",
+            "section": "overview",
+            "content": "pirate pirate pirate haki" if i == 0 else "pirate pirate pirate",
+            "categories": ["Characters"],
+            "related_entities": [],
+            "token_count": 4,
+            "source_url": "https://example.com",
+            "embedding": [0.0, 0.0],
+        }
+        for i in range(5)
+    ]
+    with index_path.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row))
+            handle.write("\n")
+
+    retriever = HybridRetriever(
+        settings=get_settings(),
+        embedder=DummyEmbedder(),
+        vector_store=None,
+        local_embeddings_path=index_path,
+    )
+    query_terms = {"pirate", "haki"}
+    rare = retriever._keyword_score(query_terms, "pirate haki")
+    common_only = retriever._keyword_score(query_terms, "pirate pirate")
+    # Le doc contenant le terme rare "haki" doit scorer plus haut.
+    assert rare > common_only

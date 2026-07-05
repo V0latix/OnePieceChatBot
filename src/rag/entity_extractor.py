@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import json
 import re
 from pathlib import Path
@@ -74,6 +75,21 @@ class EntityExtractor:
                 continue
             if alias in compact_question and len(alias) >= 8:
                 matches.append(entity)
+
+        # Repli fuzzy : rattrape les fautes de frappe / alias approchants
+        # ("Zorro" -> "Roronoa Zoro") quand le matching exact n'a rien trouve.
+        # ponytail: difflib stdlib, O(tokens x aliases) ; passer a rapidfuzz si
+        # ca apparait au profiling. Cutoff 0.8 = pas assez pour une substitution
+        # sur un nom <=4 lettres (ex. "Zolo"/"Zoro" = 0.75) mais evite les faux
+        # positifs ; ne se declenche que si le matching exact n'a rien donne.
+        if not matches:
+            alias_keys = list(self._alias_to_entity.keys())
+            for token in normalized_question.split(" "):
+                if len(token) < 4 or is_alias_stopword(token):
+                    continue
+                close = difflib.get_close_matches(token, alias_keys, n=1, cutoff=0.8)
+                if close:
+                    matches.append(self._alias_to_entity[close[0]])
 
         deduped = list(dict.fromkeys(matches))
         return deduped[:max_entities]

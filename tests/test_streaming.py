@@ -54,6 +54,7 @@ def test_ask_stream_event_order():
     mock_retrieval_result.section = "abilities"
     mock_retrieval_result.source_url = "https://example.com"
     mock_retrieval_result.final_score = 0.9
+    mock_retrieval_result.vector_score = 0.9
     mock_retrieval_result.entity_type = "character"
     mock_retrieval_result.content = "Luffy a le Gomu Gomu no Mi."
 
@@ -83,6 +84,7 @@ def test_ask_stream_metadata_fields():
     mock_result.section = "abilities"
     mock_result.source_url = "https://example.com/law"
     mock_result.final_score = 0.85
+    mock_result.vector_score = 0.85
     mock_result.entity_type = "character"
     mock_result.content = "Law possede l'Ope Ope no Mi."
 
@@ -113,6 +115,7 @@ def test_ask_stream_tokens_concatenate_to_answer():
     mock_result.section = "history"
     mock_result.source_url = "https://example.com/zoro"
     mock_result.final_score = 0.8
+    mock_result.vector_score = 0.8
     mock_result.entity_type = "character"
     mock_result.content = "Zoro est le bras droit de Luffy."
 
@@ -139,6 +142,7 @@ def test_ask_stream_passes_history_to_generator():
     mock_result.section = "history"
     mock_result.source_url = "https://example.com/nami"
     mock_result.final_score = 0.75
+    mock_result.vector_score = 0.75
     mock_result.entity_type = "character"
     mock_result.content = "Nami est la navigatrice."
 

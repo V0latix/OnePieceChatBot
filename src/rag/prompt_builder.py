@@ -2,7 +2,25 @@
 
 from __future__ import annotations
 
+import re
+
 from rag.retriever import RetrievalResult
+
+
+_CITATION_RE = re.compile(r"\[(\d+)\]")
+
+
+def grounded_ratio(answer: str, n_sources: int) -> float:
+    """Fraction des citations [i] de la reponse qui pointent une source fournie.
+
+    Retourne 1.0 si la reponse ne cite rien (pas de penalite). Sinon, part des
+    citations dont l'index est dans 1..n_sources : detecte les [i] hallucines.
+    """
+    cites = _CITATION_RE.findall(answer)
+    if not cites:
+        return 1.0
+    valid = sum(1 for c in cites if 1 <= int(c) <= n_sources)
+    return valid / len(cites)
 
 
 SYSTEM_PROMPT_TEMPLATE = """Tu es un expert encyclopedique de l'univers One Piece, le manga cree par Eiichiro Oda.

@@ -40,15 +40,15 @@ class Settings(BaseSettings):
 
     embedding_model: str = Field(default="BAAI/bge-large-en-v1.5", alias="EMBEDDING_MODEL")
     llm_model: str | None = Field(default=None, alias="LLM_MODEL")
-    groq_model: str = Field(default="llama-3.1-70b-versatile", alias="GROQ_MODEL")
+    groq_model: str = Field(default="llama-3.3-70b-versatile", alias="GROQ_MODEL")
     ollama_model: str | None = Field(default=None, alias="OLLAMA_MODEL")
     chunk_size: int = Field(default=500, alias="CHUNK_SIZE")
     chunk_overlap: int = Field(default=50, alias="CHUNK_OVERLAP")
     retrieval_top_k: int = Field(default=5, alias="RETRIEVAL_TOP_K")
 
-    rerank_vector_weight: float = Field(default=0.4, alias="RERANK_VECTOR_WEIGHT")
-    rerank_graph_weight: float = Field(default=0.4, alias="RERANK_GRAPH_WEIGHT")
-    rerank_keyword_weight: float = Field(default=0.2, alias="RERANK_KEYWORD_WEIGHT")
+    # Fusion RRF : score = Σ 1/(k+rang) sur les rankings vecteur/BM25, + biais graphe.
+    rerank_rrf_k: int = Field(default=60, alias="RERANK_RRF_K")
+    rerank_graph_boost: float = Field(default=1.0, alias="RERANK_GRAPH_BOOST")
 
     data_dir: Path = Path("data")
     raw_data_dir: Path = Path("data/raw")
@@ -72,9 +72,8 @@ class Settings(BaseSettings):
             raise ValueError("Le delai max doit etre >= au delai min")
         if self.scrape_max_retries < 1:
             raise ValueError("Le nombre de retries doit etre >= 1")
-        total = self.rerank_vector_weight + self.rerank_graph_weight + self.rerank_keyword_weight
-        if abs(total - 1.0) > 1e-6:
-            raise ValueError(f"RERANK_*_WEIGHT doivent sommer a 1.0 (actuel: {total:.4f})")
+        if self.rerank_rrf_k <= 0:
+            raise ValueError("RERANK_RRF_K doit etre strictement positif")
         return self
 
     def ensure_directories(self) -> None:

@@ -30,6 +30,18 @@ def test_short_real_name_still_matches() -> None:
     assert "Trafalgar Law" in extractor.extract("What did Law do in Dressrosa?")
 
 
+def test_fuzzy_fallback_matches_typo() -> None:
+    """Une faute de frappe ("Zorro") resout vers l'entite via difflib."""
+    extractor = EntityExtractor(["Roronoa Zoro", "Monkey D. Luffy"])
+    assert "Roronoa Zoro" in extractor.extract("Que fait Zorro au combat ?")
+
+
+def test_fuzzy_fallback_ignores_unrelated_token() -> None:
+    """Un mot sans rapport ne doit pas declencher de faux positif."""
+    extractor = EntityExtractor(["Roronoa Zoro", "Monkey D. Luffy"])
+    assert extractor.extract("Explique la photosynthese des plantes") == []
+
+
 def test_noise_categories_flags_non_canon_pages() -> None:
     """Merch/jeux/chansons sont du bruit ; les vraies categories persos non."""
     assert is_noise_categories(["Music_Stubs", "Movie_Songs"])          # Compass

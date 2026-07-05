@@ -66,11 +66,12 @@ Fandom Wiki (MediaWiki API)
 ```
 Question
   → src/rag/entity_extractor.py     (rule-based NER from data/raw/)
+  → src/rag/noise.py                (shared non-canon filter: nav/SBS/forum/gallery pages)
   → src/rag/retriever.py            (hybrid: vector + keyword + graph signals)
       ├─ Qdrant Cloud search (primary)
       └─ Local JSONL cosine similarity (fallback)
   → src/rag/spoiler_filter.py       (arc-based spoiler filtering, applied post-rerank)
-  → src/rag/reranker.py             (0.4*vector + 0.4*graph + 0.2*keyword)
+  → src/rag/reranker.py             (RRF fusion of vector + BM25 rankings + graph bias)
   → src/rag/graph_retriever.py      (Neo4j Cypher queries)
   → src/rag/prompt_builder.py       (assemble context + citations)
   → src/rag/generator.py            (Groq → Ollama → context snippet fallback)
@@ -83,11 +84,13 @@ Question
 
 **Dependency injection:** `src/api/dependencies.py` holds a singleton `RAGService` that lazy-loads embeddings and the retrieval stack on first request (not at startup) to keep the health endpoint fast.
 
-**Reranking weights:** `final_score = 0.4*vector + 0.4*graph + 0.2*keyword` — graph signals are intentionally weighted equally to vector similarity because entity-entity relationships are central to One Piece lore questions.
+**Reranking = Reciprocal Rank Fusion (RRF):** `final_score = Σ 1/(k+rank)` over the vector-similarity ranking and the BM25 lexical ranking (k=`RERANK_RRF_K`, default 60), plus a `RERANK_GRAPH_BOOST · 1/(k+1)` bias when an extracted entity matches the chunk. RRF is robust to the heterogeneous score scales (cosine vs BM25 vs binary graph) and needs no hand-tuned weights. Confidence is derived from mean top-k cosine similarity, then scaled by citation-grounding ratio (fraction of `[i]` citations that point to a real source).
 
 **Entity extraction:** Rule-based (not ML), builds an alias map from `data/raw/` documents supporting short names, last names, and full name variants. Used to boost graph signals during retrieval.
 
 ### API Endpoints
+
+Routes live in `src/api/routes/*.py` (one file per resource); the `slowapi` limiter is a singleton in `src/api/limiter.py`.
 
 | Endpoint | Purpose |
 |---|---|
@@ -116,6 +119,7 @@ All settings loaded via pydantic-settings from `src/config/settings.py`. Key env
 ### Gotchas
 
 - **Neo4j Aura username = DB-ID, not `neo4j`.** `NEO4J_USER` must be the instance DB-ID (from the downloaded Aura credentials file). Using `neo4j` gives `AuthError` even with a correct password.
-- **Groq model names get decommissioned.** `settings.py` default `groq_model=llama-3.1-70b-versatile` is dead; set `GROQ_MODEL` in .env to a current model (e.g. `llama-3.3-70b-versatile`). Symptom: 400 BadRequest.
+- **Groq model names get decommissioned.** Default is now `groq_model=llama-3.3-70b-versatile`; if Groq retires it too, set `GROQ_MODEL` in .env to a current model. Symptom of a dead model: 400 BadRequest.
+- **`/api/ask` is rate-limited to 10/min** (slowapi, keyed by IP). Load tests or rapid manual testing hit 429; loosen `@limiter.limit` in `src/api/routes/ask.py` if needed.
 - **Qdrant Cloud & Neo4j Aura free clusters expire on inactivity.** After re-creating: re-run `04_build_graph.py` for Neo4j; for Qdrant use `upload_qdrant_from_jsonl.py` (re-uploads existing embeddings, no re-embed).
 - **Production = local backend + ngrok.** Frontend is on Vercel; the backend runs locally and is exposed via a static ngrok domain. See README "Production" section. Vercel project needs Root Directory = `frontend`.

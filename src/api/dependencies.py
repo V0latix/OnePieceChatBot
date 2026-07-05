@@ -16,8 +16,8 @@ from processing.vector_store import QdrantVectorStore
 from rag.entity_extractor import EntityExtractor
 from rag.generator import AnswerGenerator
 from rag.graph_retriever import GraphRetriever
-from rag.prompt_builder import PromptBuilder
-from rag.reranker import WeightedReranker
+from rag.prompt_builder import PromptBuilder, grounded_ratio
+from rag.reranker import RRFReranker
 from rag.retriever import HybridRetriever, RetrievalResult
 from rag.spoiler_filter import filter_by_spoiler_limit
 from utils.logger import configure_logging, get_logger
@@ -43,10 +43,9 @@ class RAGService:
         self.vector_store = self._init_vector_store(settings)
         self._embedder: EmbeddingGenerator | None = None
         self._retriever: HybridRetriever | None = None
-        self.reranker = WeightedReranker(
-            vector_weight=settings.rerank_vector_weight,
-            graph_weight=settings.rerank_graph_weight,
-            keyword_weight=settings.rerank_keyword_weight,
+        self.reranker = RRFReranker(
+            k=settings.rerank_rrf_k,
+            graph_boost=settings.rerank_graph_boost,
         )
         self.prompt_builder = PromptBuilder()
         self.generator = AnswerGenerator(settings, self.prompt_builder)
@@ -146,10 +145,14 @@ class RAGService:
             history=history,
         )
 
+        # Confiance = similarite cosinus moyenne du top (deja ~[0,1]) ; le
+        # final_score RRF est trop petit (~0.02) pour servir de confiance.
         confidence = 0.0
         if top_results:
-            confidence = sum(row.final_score for row in top_results) / len(top_results)
+            confidence = sum(row.vector_score for row in top_results) / len(top_results)
             confidence = max(0.0, min(1.0, confidence))
+            # Grounding : penalise les citations [i] inventees par le LLM.
+            confidence *= grounded_ratio(answer, len(top_results))
 
         response = AskResponse(
             answer=answer,
@@ -192,9 +195,11 @@ class RAGService:
         context = self.prompt_builder.build_context(top_results, top_k=self.settings.retrieval_top_k)
         graph_context = self.prompt_builder.build_graph_context(graph_rows)
 
+        # ponytail: pas de grounding en streaming — la metadata (confidence) part
+        # avant le texte, on ne peut pas re-penaliser apres coup.
         confidence = 0.0
         if top_results:
-            confidence = sum(row.final_score for row in top_results) / len(top_results)
+            confidence = sum(row.vector_score for row in top_results) / len(top_results)
             confidence = max(0.0, min(1.0, confidence))
 
         sources = [

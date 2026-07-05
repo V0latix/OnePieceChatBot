@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from collections import Counter
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
@@ -18,6 +19,14 @@ from rag.noise import is_noise_section as _is_noise_section
 
 
 _WORD_RE = re.compile(r"[a-zA-Z0-9']+")
+
+# Parametres BM25 standards (Robertson/Sparck-Jones).
+_BM25_K1 = 1.5
+_BM25_B = 0.75
+
+
+def _tokenize(text: str) -> list[str]:
+    return [term.lower() for term in _WORD_RE.findall(text)]
 
 
 def _graph_match(entities: list[str], entity_name: str) -> bool:
@@ -89,6 +98,7 @@ class HybridRetriever:
         self.vector_store = vector_store
         self.local_embeddings_path = local_embeddings_path or settings.chunk_data_dir / "chunks_with_embeddings.jsonl"
         self.local_index = self._load_local_index()
+        self._build_bm25_stats()
 
     def _load_local_index(self) -> list[EmbeddedChunk]:
         if not self.local_embeddings_path.exists():
@@ -103,6 +113,28 @@ class HybridRetriever:
                 entries.append(EmbeddedChunk.model_validate_json(line))
         return entries
 
+    def _build_bm25_stats(self) -> None:
+        """Precalcule IDF / longueur moyenne du corpus local pour le BM25.
+
+        Le corpus local (chunks_with_embeddings.jsonl) est le corpus complet, donc
+        l'IDF y est bien defini. Les chunks Qdrant absents du local retombent sur
+        un IDF calcule avec df=0 (terme suppose rare), ce qui reste coherent.
+        """
+        doc_freq: Counter[str] = Counter()
+        total_len = 0
+        for chunk in self.local_index:
+            terms = set(_tokenize(chunk.content))
+            doc_freq.update(terms)
+            total_len += sum(1 for _ in _WORD_RE.finditer(chunk.content))
+        self._bm25_n = max(len(self.local_index), 1)
+        self._bm25_avgdl = (total_len / self._bm25_n) if self.local_index else 1.0
+        self._bm25_idf = {
+            term: self._idf(df) for term, df in doc_freq.items()
+        }
+
+    def _idf(self, df: int) -> float:
+        return math.log((self._bm25_n - df + 0.5) / (df + 0.5) + 1.0)
+
     def _cosine_similarity(self, left: list[float], right: list[float]) -> float:
         dot = sum(a * b for a, b in zip(left, right, strict=False))
         left_norm = math.sqrt(sum(a * a for a in left))
@@ -112,11 +144,28 @@ class HybridRetriever:
         return dot / (left_norm * right_norm)
 
     def _keyword_score(self, query_terms: set[str], content: str) -> float:
+        """Score BM25 (TF+IDF) du chunk pour les termes de la question.
+
+        Remplace l'ancien ratio de recouvrement d'ensembles : gere la frequence
+        des termes (TF sature) et leur rarete (IDF). Score brut non normalise ;
+        c'est la fusion RRF qui reclasse par rang, l'echelle absolue importe peu.
+        """
         if not query_terms:
             return 0.0
-        content_terms = set(term.lower() for term in _WORD_RE.findall(content))
-        overlap = query_terms.intersection(content_terms)
-        return len(overlap) / len(query_terms)
+        tokens = _tokenize(content)
+        if not tokens:
+            return 0.0
+        tf = Counter(tokens)
+        dl = len(tokens)
+        score = 0.0
+        for term in query_terms:
+            freq = tf.get(term, 0)
+            if freq == 0:
+                continue
+            idf = self._bm25_idf.get(term, self._idf(0))
+            denom = freq + _BM25_K1 * (1 - _BM25_B + _BM25_B * dl / self._bm25_avgdl)
+            score += idf * (freq * (_BM25_K1 + 1)) / denom
+        return score
 
     def _local_vector_search(
         self,
