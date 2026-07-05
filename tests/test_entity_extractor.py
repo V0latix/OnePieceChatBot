@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from rag.entity_extractor import EntityExtractor
+from rag.entity_extractor import EntityExtractor, _mine_aliases
 from rag.noise import is_noise_categories
 
 
@@ -62,6 +62,36 @@ def test_no_importance_first_write_wins() -> None:
     assert "Nightmare Luffy" in EntityExtractor(
         ["Nightmare Luffy", "Monkey D. Luffy"]
     ).extract("Quel est le fruit de Luffy ?")
+
+
+def test_mine_aliases_from_lede() -> None:
+    """Le lede "X, known by his alias Y, is..." doit extraire Y."""
+    assert _mine_aliases("Kuzan, better known by his alias Aokiji, is one of the Ten.") == ["Aokiji"]
+    assert _mine_aliases('Edward Newgate, more commonly known as "Whitebeard", was a pirate.') == ["Whitebeard"]
+    assert _mine_aliases("Sakazuki, formerly known by his Admiral alias Akainu, is Fleet Admiral.") == ["Akainu"]
+
+
+def test_mine_aliases_ignores_benign_sentences() -> None:
+    """Pas d'alias -> rien (pas de faux positif sur une phrase descriptive)."""
+    assert _mine_aliases("This island is a place where pirates gather and fight.") == []
+    assert _mine_aliases("It is commonly known as the Grand Line by sailors.") == []
+
+
+def test_mined_alias_resolves_to_entity() -> None:
+    """"aokiji" (alias hors-titre) doit resoudre vers Kuzan."""
+    extractor = EntityExtractor(["Kuzan"], extra_aliases={"Kuzan": ["Aokiji"]})
+    assert "Kuzan" in extractor.extract("Qui est l'amiral Aokiji ?")
+
+
+def test_mined_alias_does_not_clobber_important_title() -> None:
+    """Un alias mine ne doit pas voler une cle a un titre canonique plus important."""
+    extractor = EntityExtractor(
+        ["Baroque Works", "Zala"],
+        importance={"Baroque Works": 50, "Zala": 2},
+        extra_aliases={"Zala": ["Baroque Works"]},
+    )
+    assert "Baroque Works" in extractor.extract("Parle-moi de Baroque Works")
+    assert "Zala" not in extractor.extract("Parle-moi de Baroque Works")
 
 
 def test_noise_categories_flags_non_canon_pages() -> None:

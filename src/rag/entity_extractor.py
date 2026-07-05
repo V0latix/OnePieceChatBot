@@ -12,15 +12,42 @@ from rag.noise import is_alias_stopword, is_noise_entity
 
 _NORMALIZE_RE = re.compile(r"[^a-z0-9\s]")
 
+# Lede du wiki : "X, (better/also/formerly) known (as | by his/her alias|epithet) Y, is..."
+# Capture Y (1-3 mots capitalises), borne par une ponctuation ou un verbe de phrase.
+_ALIAS_RE = re.compile(
+    r"known\s+(?:as\s+|by\s+(?:his|her|its)\s+(?:\w+\s+){0,2}(?:alias|epithet)\s+)"
+    r"[\"“]?([A-Z][\w'’\-]+(?:\s+[A-Z][\w'’\-]+){0,2})[\"”]?"
+    r"(?=[,.]| and | is | was )"
+)
+
+
+def _mine_aliases(overview: str) -> list[str]:
+    """Extrait les alias/epithetes du lede (ex: "Kuzan, known by his alias Aokiji, ...")."""
+    aliases: list[str] = []
+    for raw in _ALIAS_RE.findall(overview[:250]):
+        alias = raw.strip()
+        last_word = alias.lower().split(" ")[-1]
+        if len(alias) < 3 or is_alias_stopword(last_word) or is_noise_entity(alias):
+            continue
+        aliases.append(alias)
+    return list(dict.fromkeys(aliases))
+
 
 class EntityExtractor:
     """Extractor rule-based base sur un dictionnaire d'entites connues."""
 
-    def __init__(self, entities: list[str], importance: dict[str, int] | None = None) -> None:
+    def __init__(
+        self,
+        entities: list[str],
+        importance: dict[str, int] | None = None,
+        extra_aliases: dict[str, list[str]] | None = None,
+    ) -> None:
         self.entities = list(dict.fromkeys(entity.strip() for entity in entities if entity.strip()))
         # Prior d'importance (ex: nb de related_entities) pour arbitrer les collisions
         # d'alias : "luffy" -> "Monkey D. Luffy" (145) plutot que "Nightmare Luffy" (1).
         self._importance = importance or {}
+        # Alias/epithetes hors-titre mines du lede : "aokiji" -> Kuzan, "whitebeard" -> Edward Newgate.
+        self._extra_aliases = extra_aliases or {}
         self._alias_to_entity = self._build_alias_map(self.entities)
 
     @staticmethod
@@ -59,6 +86,15 @@ class EntityExtractor:
             compact = normalized.replace(" ", "")
             if len(compact) >= 6:
                 self._assign(alias_map, compact, entity)
+
+        # Passe 3 : alias/epithetes mines du lede (importance-aware : un alias mine
+        # n'ecrase jamais un titre canonique plus important, ex "Baroque Works" -> l'org).
+        for entity, aliases in self._extra_aliases.items():
+            entity_norm = self._normalize(entity)
+            for alias in aliases:
+                alias_norm = self._normalize(alias)
+                if alias_norm and alias_norm != entity_norm:
+                    self._assign(alias_map, alias_norm, entity)
         return alias_map
 
     @classmethod
@@ -66,6 +102,7 @@ class EntityExtractor:
         """Construit l'extractor depuis les JSON de data/raw."""
         entities: list[str] = []
         importance: dict[str, int] = {}
+        extra_aliases: dict[str, list[str]] = {}
         for path in sorted(raw_dir.glob("*.json")):
             payload = json.loads(path.read_text(encoding="utf-8"))
             title = payload.get("title")
@@ -76,7 +113,14 @@ class EntityExtractor:
                 # Prior d'importance = nb de related_entities (les pages canoniques des
                 # personnages principaux en ont des centaines, les pages filler ~1).
                 importance[title] = len(payload.get("related_entities", []) or [])
-        return cls(entities, importance=importance)
+                # Alias hors-titre depuis le lede des pages perso ("aokiji" -> Kuzan).
+                if payload.get("type") == "character":
+                    sections = payload.get("sections") or {}
+                    overview = sections.get("overview", "") if isinstance(sections, dict) else ""
+                    mined = _mine_aliases(str(overview))
+                    if mined:
+                        extra_aliases[title] = mined
+        return cls(entities, importance=importance, extra_aliases=extra_aliases)
 
     def extract(self, question: str, max_entities: int = 5) -> list[str]:
         """Retourne les entites detectees dans la question."""

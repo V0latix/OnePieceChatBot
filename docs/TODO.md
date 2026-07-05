@@ -22,7 +22,7 @@ Faiblesses qui motivent ce backlog :
 | 4 | Aucune query transformation (pas de HyDE / multi-query / décomposition) | — |
 | 5 | Graphe Neo4j sous-exploité : n'influence jamais le classement, sert au prompt | `src/rag/graph_retriever.py` |
 | 6 | Fallback vecteur local = cosinus O(N) en Python pur | `src/rag/retriever.py` `_local_vector_search` |
-| 7 | ~~Extraction d'entités rule-based~~ ✅ collisions d'alias résolues par prior d'importance ; reste : alias hors-titre (ex. "Aokiji"→Kuzan) | `src/rag/entity_extractor.py` |
+| 7 | ~~Extraction d'entités rule-based~~ ✅ collisions résolues (prior d'importance) + alias hors-titre minés du lede ("Aokiji"→Kuzan, "Whitebeard"→Edward Newgate) | `src/rag/entity_extractor.py` |
 | 8 | Citations non vérifiées : le LLM cite `[i]` sans grounding programmatique | `src/rag/prompt_builder.py` |
 | 9 | Modèle Groq périmé (`llama-3.1-70b-versatile` décommissionné) | `src/config/settings.py:43` |
 | 10 | Aucune évaluation : ni golden set ni métrique | — |
@@ -169,5 +169,11 @@ Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriqu
 > "luffy"→Monkey D. Luffy (145) au lieu de Nightmare Luffy (1), "law"→Trafalgar D. Water Law.
 > Mesure : seed accuracy 72 %, **Hit@5 64 %→68 %** (CE off, n=25), suite 143 verte.
 > Nouveau : métrique *seed accuracy* dans `06_eval.py`. Débloque un futur §5 PPR (seeds corrects).
+> **Fait (alias hors-titre) :** minés du lede wiki ("X, known by his alias Y, is…") pour les
+> pages perso, importance-aware (n'écrase pas un titre canonique). "Aokiji"→Kuzan,
+> "Kizaru/Akainu/Ryokugyu/Fujitora" (les 5 amiraux), "Whitebeard"→Edward Newgate.
+> Mesure : **seed accuracy 72 %→80 %** (CE off, n=25), Hit@5 plat, suite 147 verte.
+> Note : le plein bénéfice (graph_context, fetch_relations) est en sommeil tant que
+> Neo4j est mort ; effet runtime actuel = entités affichées correctes + boost graphe minime.
 > Restent ouverts : §1 contextual retrieval, §2 PPR (graphe à reconstruire + nœuds passages)/
 > query-transform/RAPTOR, §3 ANN local + alias hors-titre (infobox).
