@@ -68,6 +68,18 @@ class DocumentChunker:
         normalized = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in key.lower())
         return normalized.strip("_") or "overview"
 
+    def _contextual_prefix(self, document: "ScrapedPageDocument", section: str) -> str:
+        """Ligne de contexte anteposee au chunk (contextual retrieval, v1 sans LLM).
+
+        Idee : ancrer un chunk orphelin a sa page/section. MESURE : le prefixe
+        boilerplate repete sur 37k chunks dilue les embeddings et regresse le
+        retrieval (Hit@5 68%->52%). Desactive par defaut (`chunk_contextual`).
+        """
+        if not self.settings.chunk_contextual:
+            return ""
+        section_label = section.replace("_", " ")
+        return f"Page: {document.title} ({document.type}). Section: {section_label}.\n\n"
+
     def _flatten_sections(self, sections: dict[str, Any], prefix: str | None = None) -> Iterable[tuple[str, str]]:
         for key, value in sections.items():
             section_key = f"{prefix}.{key}" if prefix else key
@@ -93,15 +105,17 @@ class DocumentChunker:
             if not section_chunks:
                 continue
 
+            prefix = self._contextual_prefix(document, normalized_section)
             for idx, chunk_text in enumerate(section_chunks, start=1):
-                token_count = self.count_tokens(chunk_text)
+                content = prefix + chunk_text
+                token_count = self.count_tokens(content)
                 chunk = ChunkRecord(
                     chunk_id=f"{document.id}__{normalized_section}__{idx:03d}",
                     entity_id=document.id,
                     entity_name=document.title,
                     entity_type=document.type,
                     section=normalized_section,
-                    content=chunk_text,
+                    content=content,
                     categories=document.categories,
                     related_entities=document.related_entities,
                     token_count=token_count,

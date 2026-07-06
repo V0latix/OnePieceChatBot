@@ -144,7 +144,7 @@ rapide que llama.cpp** sur workloads d'embedding Apple Silicon.
 
 1. ✅ **Golden set + eval** (`data/eval/golden.jsonl`, `scripts/06_eval.py` réparé, `scripts/07_eval_ragas.py`) — fait, variante *lean* (juge Groq, sans dépendance ragas)
 2. ✅ **RRF + BM25** (`reranker.py` / `retriever.py`) — fait
-3. **Contextual retrieval** (`chunker.py` / `embedder.py`)
+3. ❌ **Contextual retrieval v1** (préfixe templaté, `chunker.py`) — testé, **régresse** (Hit@5 68→52 %), rollback ; blurb LLM à tester
 4. ✅ **bge-reranker-v2-m3** en 2e étage (`CrossEncoderReranker`, opt-in `RERANK_CROSS_ENCODER=1`) — fait
 5. ⚠️ **PPR graphe** (`graph_ranker.py`, opt-in `GRAPH_PPR=1`) — implémenté mais **effet non prouvé** (graphe co-occurrence dégénéré), laissé OFF
 6. **Résumés RAPTOR + community summaries** (offline)
@@ -183,4 +183,10 @@ Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriqu
 > Verdict : **effet non prouvé** — le graphe est un co-occurrence non typé (tout `RELATED_TO`),
 > PPR n'a quasi pas de signal exploitable. Laissé **OFF** (`GRAPH_PPR=0`). À revisiter APRÈS
 > reconstruction du graphe (relations typées + nœuds passages), là où PPR paie vraiment.
-> Restent ouverts : §1 contextual retrieval, §2 query-transform/RAPTOR, §3 ANN local + graphe typé.
+> **Testé & rejeté (§1 contextual retrieval v1) :** préfixe templaté sans LLM
+> ("Page: X (type). Section: Y.") anteposé à chaque chunk, re-embed complet des 36 949
+> chunks (~2 h). Mesure A/B locale (CE+PPR off) : **Hit@5 68 %→52 %, Recall@5 88 %→84 %** —
+> le boilerplate répété dilue les embeddings. Rollback (backup restauré, Qdrant jamais
+> touché grâce à `--dry-run`). Toggle `CHUNK_CONTEXTUAL` gardé OFF. Leçon : la version
+> lean templatée ne marche pas ici ; seul un vrai blurb LLM par chunk vaut la peine d'être retenté.
+> Restent ouverts : §2 query-transform/RAPTOR, §3 ANN local + graphe typé, §1 blurb LLM.

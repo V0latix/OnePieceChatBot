@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     ollama_model: str | None = Field(default=None, alias="OLLAMA_MODEL")
     chunk_size: int = Field(default=500, alias="CHUNK_SIZE")
     chunk_overlap: int = Field(default=50, alias="CHUNK_OVERLAP")
+    # Contextual retrieval v1 (prefixe "Page: X (type). Section: Y." par chunk).
+    # MESURE : regresse le retrieval (Hit@5 68%->52%) — le prefixe boilerplate repete
+    # sur 37k chunks dilue les embeddings. Laisse OFF ; un vrai blurb LLM par chunk
+    # (methode Anthropic complete) reste a tester avant de reactiver.
+    chunk_contextual: bool = Field(default=False, alias="CHUNK_CONTEXTUAL")
     retrieval_top_k: int = Field(default=5, alias="RETRIEVAL_TOP_K")
 
     # Fusion RRF : score = Σ 1/(k+rang) sur les rankings vecteur/BM25, + biais graphe.
