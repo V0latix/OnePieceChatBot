@@ -49,6 +49,14 @@ def test_zero_signal_contributes_nothing() -> None:
     assert ranked[0].final_score == 0.0
 
 
+def test_continuous_graph_score_orders_by_proximity() -> None:
+    # Graphe seul signal : le graph_score continu (PPR) classe b (0.9) devant a (0.1).
+    a = _result("a", graph=0.1)
+    b = _result("b", graph=0.9)
+    ranked = RRFReranker(k=60, graph_boost=1.0).rerank([a, b])
+    assert ranked[0].chunk_id == "b"
+
+
 # --- Cross-encoder (2e etage) ---------------------------------------------
 
 

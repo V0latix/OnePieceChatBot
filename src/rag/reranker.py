@@ -32,13 +32,18 @@ class RRFReranker:
         return {id(r): 1.0 / (self.k + rank) for rank, r in enumerate(ranked, start=1)}
 
     def rerank(self, results: list[Any]) -> list[Any]:
-        """Calcule final_score par fusion RRF et trie les resultats."""
+        """Calcule final_score par fusion RRF (vecteur + BM25 + graphe) et trie."""
         vec = self._rank_contrib(results, "vector_score")
         kw = self._rank_contrib(results, "keyword_score")
+        # Le graphe est un 3e signal classe par rang (weighted RRF) : gere aussi bien
+        # le score binaire (0/1) que le score continu PPR, sans poids a calibrer.
+        gph = self._rank_contrib(results, "graph_score")
         for result in results:
-            score = vec.get(id(result), 0.0) + kw.get(id(result), 0.0)
-            if result.graph_score > 0:
-                score += self.graph_boost / (self.k + 1)
+            score = (
+                vec.get(id(result), 0.0)
+                + kw.get(id(result), 0.0)
+                + self.graph_boost * gph.get(id(result), 0.0)
+            )
             result.final_score = score
         return sorted(results, key=lambda item: item.final_score, reverse=True)
 

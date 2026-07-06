@@ -15,6 +15,7 @@ from processing.graph_builder import GraphBuilder
 from processing.vector_store import QdrantVectorStore
 from rag.entity_extractor import EntityExtractor
 from rag.generator import AnswerGenerator
+from rag.graph_ranker import GraphRanker
 from rag.graph_retriever import GraphRetriever
 from rag.prompt_builder import PromptBuilder, grounded_ratio
 from rag.reranker import CrossEncoderReranker, RRFReranker
@@ -90,10 +91,14 @@ class RAGService:
         """Initialise le retriever a la demande pour eviter un cold-start lourd."""
         if self._retriever is None:
             self._embedder = EmbeddingGenerator(self.settings.embedding_model)
+            graph_ranker = None
+            if self.settings.graph_ppr:
+                graph_ranker = GraphRanker(self.settings.graph_data_dir / "triplets.jsonl")
             self._retriever = HybridRetriever(
                 settings=self.settings,
                 embedder=self._embedder,
                 vector_store=self.vector_store,
+                graph_ranker=graph_ranker,
             )
         return self._retriever
 

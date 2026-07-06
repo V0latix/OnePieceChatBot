@@ -27,6 +27,7 @@ from config.settings import get_settings
 from processing.embedder import EmbeddingGenerator
 from processing.vector_store import QdrantVectorStore
 from rag.entity_extractor import EntityExtractor
+from rag.graph_ranker import GraphRanker
 from rag.reranker import CrossEncoderReranker, RRFReranker
 from rag.retriever import HybridRetriever
 from utils.logger import configure_logging, get_logger
@@ -65,7 +66,12 @@ def run_evaluation(top_k: int = 5, verbose: bool = False) -> None:
             )
         except Exception as exc:  # noqa: BLE001 - fallback index cosine local
             logger.warning("Qdrant injoignable (%s): eval sur index cosine local", exc)
-    retriever = HybridRetriever(settings=settings, embedder=embedder, vector_store=vector_store)
+    graph_ranker = (
+        GraphRanker(settings.graph_data_dir / "triplets.jsonl") if settings.graph_ppr else None
+    )
+    retriever = HybridRetriever(
+        settings=settings, embedder=embedder, vector_store=vector_store, graph_ranker=graph_ranker
+    )
     reranker = RRFReranker(k=settings.rerank_rrf_k, graph_boost=settings.rerank_graph_boost)
     cross_encoder = (
         CrossEncoderReranker(settings.cross_encoder_model)
@@ -74,7 +80,8 @@ def run_evaluation(top_k: int = 5, verbose: bool = False) -> None:
     )
     entity_extractor = EntityExtractor.from_raw_documents(settings.raw_data_dir)
     ce_state = "ON" if cross_encoder else "OFF"
-    print(f"OK ({time.time() - t0:.1f}s)  [cross-encoder: {ce_state}]\n")
+    ppr_state = "ON" if graph_ranker else "OFF"
+    print(f"OK ({time.time() - t0:.1f}s)  [cross-encoder: {ce_state} | PPR: {ppr_state}]\n")
 
     results: list[EvalResult] = []
     seed_hits = 0  # questions dont l'extraction seed >=1 entite attendue

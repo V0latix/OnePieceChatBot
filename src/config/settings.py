@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     cross_encoder_model: str = Field(default="BAAI/bge-reranker-v2-m3", alias="CROSS_ENCODER_MODEL")
     rerank_candidates: int = Field(default=30, alias="RERANK_CANDIDATES")
 
+    # Personalized PageRank : graph_score continu (proximite graphe) seede sur les
+    # entites de la question, au lieu du signal binaire. OFF par defaut (mesurer avant).
+    graph_ppr: bool = Field(default=False, alias="GRAPH_PPR")
+
     data_dir: Path = Path("data")
     raw_data_dir: Path = Path("data/raw")
     processed_data_dir: Path = Path("data/processed")

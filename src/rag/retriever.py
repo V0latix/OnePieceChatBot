@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict
 from config.settings import Settings
 from processing.embedder import EmbeddingGenerator
 from processing.vector_store import QdrantVectorStore
+from rag.graph_ranker import GraphRanker
 from rag.noise import is_noise_categories as _is_noise_categories
 from rag.noise import is_noise_entity as _is_noise_entity
 from rag.noise import is_noise_section as _is_noise_section
@@ -93,10 +94,13 @@ class HybridRetriever:
         embedder: EmbeddingGenerator,
         vector_store: QdrantVectorStore | None = None,
         local_embeddings_path: Path | None = None,
+        graph_ranker: "GraphRanker | None" = None,
     ) -> None:
         self.settings = settings
         self.embedder = embedder
         self.vector_store = vector_store
+        # PPR optionnel : injecte un graph_score continu (proximite graphe) au lieu du binaire.
+        self.graph_ranker = graph_ranker
         self.local_embeddings_path = local_embeddings_path or settings.chunk_data_dir / "chunks_with_embeddings.jsonl"
         self.local_index = self._load_local_index()
         self._build_bm25_stats()
@@ -260,11 +264,21 @@ class HybridRetriever:
 
         query_terms = set(term.lower() for term in _WORD_RE.findall(question) if len(term) >= 3)
 
+        # PPR : score graphe continu (proximite) si un ranker est branche et seede.
+        ppr_scores: dict[str, float] = {}
+        if self.graph_ranker is not None and entities:
+            ppr_scores = self.graph_ranker.personalized_scores(entities)
+
+        def _graph_score(entity_name: str) -> float:
+            if ppr_scores:
+                return ppr_scores.get(entity_name, 0.0)
+            # Fallback binaire (PPR off ou aucun seed dans le graphe).
+            return 1.0 if entities and _graph_match(entities, entity_name) else 0.0
+
         combined: dict[str, RetrievalResult] = {}
         for result in vector_results:
             result.keyword_score = self._keyword_score(query_terms, result.content)
-            if entities and _graph_match(entities, result.entity_name):
-                result.graph_score = 1.0
+            result.graph_score = _graph_score(result.entity_name)
             combined[result.chunk_id] = result
 
         # Ajout lexical pur si l'index local existe.
@@ -290,7 +304,7 @@ class HybridRetriever:
                 content=chunk.content,
                 source_url=chunk.source_url,
                 keyword_score=keyword_score,
-                graph_score=1.0 if _graph_match(entities, chunk.entity_name) else 0.0,
+                graph_score=_graph_score(chunk.entity_name),
             )
 
         results = list(combined.values())

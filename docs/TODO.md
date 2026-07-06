@@ -16,17 +16,17 @@ Faiblesses qui motivent ce backlog :
 
 | # | Faiblesse | Où |
 |---|-----------|----|
-| 1 | Rerank = somme linéaire non calibrée `0.4·vec + 0.4·graph + 0.2·kw`, pas de cross-encoder ; signal graphe binaire (0/1) qui domine | `src/rag/reranker.py:19` |
-| 2 | Keyword = simple ratio de recouvrement d'ensembles, pas de BM25/IDF | `src/rag/retriever.py` `_keyword_score` |
-| 3 | Pas de vraie fusion : scores collectés puis pondérés (pas de RRF) | `src/rag/retriever.py` / `reranker.py` |
+| 1 | ~~Rerank somme linéaire + graphe binaire~~ ✅ RRF + cross-encoder + graph_score continu (PPR) | `src/rag/reranker.py` |
+| 2 | ~~Keyword = ratio d'overlap~~ ✅ vrai BM25 (TF·IDF) | `src/rag/retriever.py` `_keyword_score` |
+| 3 | ~~Pas de vraie fusion~~ ✅ fusion RRF | `src/rag/retriever.py` / `reranker.py` |
 | 4 | Aucune query transformation (pas de HyDE / multi-query / décomposition) | — |
-| 5 | Graphe Neo4j sous-exploité : n'influence jamais le classement, sert au prompt | `src/rag/graph_retriever.py` |
+| 5 | ⚠️ Graphe replié dans le classement (PPR opt-in) **mais effet non prouvé** ; Neo4j live → sert encore au prompt | `src/rag/graph_ranker.py` |
 | 6 | Fallback vecteur local = cosinus O(N) en Python pur | `src/rag/retriever.py` `_local_vector_search` |
 | 7 | ~~Extraction d'entités rule-based~~ ✅ collisions résolues (prior d'importance) + alias hors-titre minés du lede ("Aokiji"→Kuzan, "Whitebeard"→Edward Newgate) | `src/rag/entity_extractor.py` |
-| 8 | Citations non vérifiées : le LLM cite `[i]` sans grounding programmatique | `src/rag/prompt_builder.py` |
-| 9 | Modèle Groq périmé (`llama-3.1-70b-versatile` décommissionné) | `src/config/settings.py:43` |
-| 10 | Aucune évaluation : ni golden set ni métrique | — |
-| 11 | Tests absents sur reranker / generator / graph_retriever | `tests/` |
+| 8 | ~~Citations non vérifiées~~ ✅ grounding programmatique (`grounded_ratio`) | `src/rag/prompt_builder.py` |
+| 9 | ~~Modèle Groq périmé~~ ✅ `llama-3.3-70b-versatile` | `src/config/settings.py` |
+| 10 | ~~Aucune évaluation~~ ✅ golden set + `06_eval` (Hit@K/Recall@K/seed) + `07_eval_ragas` (faithfulness/relevancy) | `data/eval/`, `scripts/` |
+| 11 | ⚠️ Tests reranker ✅ + graph_ranker ✅ ; reste generator (chaîne fallback) / graph_retriever | `tests/` |
 
 ---
 
@@ -146,7 +146,7 @@ rapide que llama.cpp** sur workloads d'embedding Apple Silicon.
 2. ✅ **RRF + BM25** (`reranker.py` / `retriever.py`) — fait
 3. **Contextual retrieval** (`chunker.py` / `embedder.py`)
 4. ✅ **bge-reranker-v2-m3** en 2e étage (`CrossEncoderReranker`, opt-in `RERANK_CROSS_ENCODER=1`) — fait
-5. **PPR graphe** (`graph_retriever.py`)
+5. ⚠️ **PPR graphe** (`graph_ranker.py`, opt-in `GRAPH_PPR=1`) — implémenté mais **effet non prouvé** (graphe co-occurrence dégénéré), laissé OFF
 6. **Résumés RAPTOR + community summaries** (offline)
 
 Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriques RAGAS.
@@ -175,5 +175,12 @@ Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriqu
 > Mesure : **seed accuracy 72 %→80 %** (CE off, n=25), Hit@5 plat, suite 147 verte.
 > Note : le plein bénéfice (graph_context, fetch_relations) est en sommeil tant que
 > Neo4j est mort ; effet runtime actuel = entités affichées correctes + boost graphe minime.
-> Restent ouverts : §1 contextual retrieval, §2 PPR (graphe à reconstruire + nœuds passages)/
-> query-transform/RAPTOR, §3 ANN local + alias hors-titre (infobox).
+> **Fait (§5 PPR + Neo4j live) :** Neo4j Aura de nouveau up (7708 nœuds / 99345 arêtes) →
+> `graph_context` réactivé automatiquement. `GraphRanker` (NetworkX PPR sur `triplets.jsonl`,
+> GDS indispo sur Aura Free) branché comme `graph_score` continu, replié dans RRF comme 3e
+> signal classé (refactor reranker, **0 régression** vs binaire). **Mesure A/B (CE off, n=25) :
+> Hit@5 68 % et Recall@5 88 % INCHANGÉS** ; A/B génération bloqué (Groq HS pendant le test).
+> Verdict : **effet non prouvé** — le graphe est un co-occurrence non typé (tout `RELATED_TO`),
+> PPR n'a quasi pas de signal exploitable. Laissé **OFF** (`GRAPH_PPR=0`). À revisiter APRÈS
+> reconstruction du graphe (relations typées + nœuds passages), là où PPR paie vraiment.
+> Restent ouverts : §1 contextual retrieval, §2 query-transform/RAPTOR, §3 ANN local + graphe typé.
