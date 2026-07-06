@@ -26,7 +26,7 @@ Faiblesses qui motivent ce backlog :
 | 8 | ~~Citations non vérifiées~~ ✅ grounding programmatique (`grounded_ratio`) | `src/rag/prompt_builder.py` |
 | 9 | ~~Modèle Groq périmé~~ ✅ `llama-3.3-70b-versatile` | `src/config/settings.py` |
 | 10 | ~~Aucune évaluation~~ ✅ golden set **61 Q** (durci) + `06_eval` (Hit@K/Recall@K/seed, `--sleep`/`--limit`) + `07_eval_ragas` | `data/eval/`, `scripts/` |
-| 11 | ⚠️ Tests reranker ✅ + graph_ranker ✅ ; reste generator (chaîne fallback) / graph_retriever | `tests/` |
+| 11 | ~~Tests absents~~ ✅ reranker + graph_ranker + generator (chaîne fallback Groq→Ollama→snippet) + graph_retriever (parsing + degradation) | `tests/` |
 
 ---
 
@@ -208,4 +208,8 @@ Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriqu
 > questions dures (+8 Hit / +6,6 Recall même à moitié appliqué → vrai gain ≥ ça), moins
 > spectaculaire que sur le set facile (questions plus dures). Chiffre net complet à
 > relancer quota réinitialisé : `HYDE=1 06_eval --sleep 8`.
-> Restent ouverts : chiffre HyDE net sur n=61, §2 multi-query/RAPTOR, §3 ANN local + graphe typé.
+> **Fait (#11 tests, sans Groq) :** `test_generator.py` (chaîne Groq→Ollama→snippet +
+> fallback streaming) et `test_graph_retriever.py` (parsing Cypher relations/subgraph +
+> dédup + dégradation gracieuse Neo4j down). Suite 157→169 verte. Ferme le dernier ⚠️ #11.
+> Restent ouverts (bloqués Groq jusqu'au reset quota) : chiffre HyDE net sur n=61,
+> §2 multi-query/RAPTOR, génération eval ; §3 ANN local (perf, faible valeur).
