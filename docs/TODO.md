@@ -201,8 +201,11 @@ Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriqu
 > multi-hop, disambiguation/vrai-nom, devil-fruit, global, spoiler, faction). Motif : HyDE
 > avait **saturé** l'ancien set (Recall@5 100 %), plus rien à mesurer. Nouveau plancher
 > **sans Groq (HYDE/CE off) : Hit@5 52,5 %, Recall@5 67,2 %, seed 52,5 %** (n=61) → la
-> résolution est revenue. `06_eval` gagne `--sleep`/`--limit`. **HyDE sur le set durci = à
-> mesurer** (quota journalier Groq free épuisé pendant la session ; relancer avec
-> `HYDE=1 06_eval --sleep 8` quand le quota se réinitialise). Le gain HyDE prouvé reste
-> celui du set n=25 (Hit@5 68→92 %, Recall@5 88→100 %).
-> Restent ouverts : mesurer HyDE/CE sur n=61, §2 multi-query/RAPTOR, §3 ANN local + graphe typé.
+> résolution est revenue. `06_eval` gagne `--sleep`/`--limit`.
+> **HyDE sur le set durci (partiel, borne basse) :** quota journalier Groq free quasi
+> épuisé → run partiel (≈moitié des questions ont eu HyDE avant les 429) : **Hit@5
+> ~60,7 %, Recall@5 ~73,8 %** vs baseline 52,5 %/67,2 %. Donc HyDE aide AUSSI sur les
+> questions dures (+8 Hit / +6,6 Recall même à moitié appliqué → vrai gain ≥ ça), moins
+> spectaculaire que sur le set facile (questions plus dures). Chiffre net complet à
+> relancer quota réinitialisé : `HYDE=1 06_eval --sleep 8`.
+> Restent ouverts : chiffre HyDE net sur n=61, §2 multi-query/RAPTOR, §3 ANN local + graphe typé.
