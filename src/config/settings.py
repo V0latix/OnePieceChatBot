@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     # entites de la question, au lieu du signal binaire. OFF par defaut (mesurer avant).
     graph_ppr: bool = Field(default=False, alias="GRAPH_PPR")
 
+    # HyDE : embarque un passage hypothetique anglais (genere par Groq) pour la recherche
+    # dense, comblant l'ecart question FR / corpus EN. +1 appel Groq / requete. OFF (mesurer).
+    hyde: bool = Field(default=False, alias="HYDE")
+
     data_dir: Path = Path("data")
     raw_data_dir: Path = Path("data/raw")
     processed_data_dir: Path = Path("data/processed")

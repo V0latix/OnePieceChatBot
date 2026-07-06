@@ -15,6 +15,45 @@ class DummyEmbedder:
         return [1.0, 0.0]
 
 
+class RecordingEmbedder:
+    """Capture le texte reellement embarque (pour verifier l'isolation HyDE)."""
+
+    def __init__(self) -> None:
+        self.last_text: str | None = None
+
+    def embed_query(self, query: str) -> list[float]:
+        self.last_text = query
+        return [1.0, 0.0]
+
+
+def _one_chunk_index(tmp_path):
+    index_path = tmp_path / "chunks_with_embeddings.jsonl"
+    row = {
+        "chunk_id": "luffy__001", "entity_id": "luffy", "entity_name": "Monkey D. Luffy",
+        "entity_type": "character", "section": "abilities",
+        "content": "Luffy maitrise le haki.", "categories": ["Characters"],
+        "related_entities": [], "token_count": 6,
+        "source_url": "https://example.com", "embedding": [1.0, 0.0],
+    }
+    with index_path.open("w", encoding="utf-8") as handle:
+        handle.write(json.dumps(row) + "\n")
+    return index_path
+
+
+def test_embed_text_isolated_to_dense_channel(tmp_path) -> None:
+    # embed_text (HyDE) sert a la recherche dense ; le keyword reste sur la question.
+    embedder = RecordingEmbedder()
+    retriever = HybridRetriever(
+        settings=get_settings(), embedder=embedder, vector_store=None,
+        local_embeddings_path=_one_chunk_index(tmp_path),
+    )
+    results = retriever.retrieve("haki", entities=[], top_k=5, embed_text="HYDE english passage")
+    # Le dense a bien embarque le passage HyDE, pas la question brute.
+    assert embedder.last_text == "HYDE english passage"
+    # Le keyword a bien matche le terme "haki" de la QUESTION (pas du passage HyDE).
+    assert any(r.keyword_score > 0 for r in results)
+
+
 def test_retriever_uses_local_index_and_scores_keyword(tmp_path) -> None:
     index_path = tmp_path / "chunks_with_embeddings.jsonl"
     rows = [

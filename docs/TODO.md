@@ -19,7 +19,7 @@ Faiblesses qui motivent ce backlog :
 | 1 | ~~Rerank somme linéaire + graphe binaire~~ ✅ RRF + cross-encoder + graph_score continu (PPR) | `src/rag/reranker.py` |
 | 2 | ~~Keyword = ratio d'overlap~~ ✅ vrai BM25 (TF·IDF) | `src/rag/retriever.py` `_keyword_score` |
 | 3 | ~~Pas de vraie fusion~~ ✅ fusion RRF | `src/rag/retriever.py` / `reranker.py` |
-| 4 | Aucune query transformation (pas de HyDE / multi-query / décomposition) | — |
+| 4 | ~~Aucune query transformation~~ ✅ HyDE (passage hypothétique EN pour le dense) — **Hit@5 68→92 %, Recall@5 88→100 %** | `src/rag/query_transformer.py` |
 | 5 | ⚠️ Graphe replié dans le classement (PPR opt-in) **mais effet non prouvé** ; Neo4j live → sert encore au prompt | `src/rag/graph_ranker.py` |
 | 6 | Fallback vecteur local = cosinus O(N) en Python pur | `src/rag/retriever.py` `_local_vector_search` |
 | 7 | ~~Extraction d'entités rule-based~~ ✅ collisions résolues (prior d'importance) + alias hors-titre minés du lede ("Aokiji"→Kuzan, "Whitebeard"→Edward Newgate) | `src/rag/entity_extractor.py` |
@@ -148,6 +148,7 @@ rapide que llama.cpp** sur workloads d'embedding Apple Silicon.
 4. ✅ **bge-reranker-v2-m3** en 2e étage (`CrossEncoderReranker`, opt-in `RERANK_CROSS_ENCODER=1`) — fait
 5. ⚠️ **PPR graphe** (`graph_ranker.py`, opt-in `GRAPH_PPR=1`) — implémenté mais **effet non prouvé** (graphe co-occurrence dégénéré), laissé OFF
 6. **Résumés RAPTOR + community summaries** (offline)
+7. ✅ **HyDE** (§2 query transformation, `query_transformer.py`, opt-in `HYDE=1`) — **plus gros gain** (Hit@5 68→92 %, Recall@5 88→100 %)
 
 Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriques RAGAS.
 
@@ -189,4 +190,11 @@ Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriqu
 > le boilerplate répété dilue les embeddings. Rollback (backup restauré, Qdrant jamais
 > touché grâce à `--dry-run`). Toggle `CHUNK_CONTEXTUAL` gardé OFF. Leçon : la version
 > lean templatée ne marche pas ici ; seul un vrai blurb LLM par chunk vaut la peine d'être retenté.
-> Restent ouverts : §2 query-transform/RAPTOR, §3 ANN local + graphe typé, §1 blurb LLM.
+> **Fait (§2 HyDE) — plus gros gain de la série :** `QueryTransformer.hyde` génère un
+> passage hypothétique **anglais** (1 appel Groq) embarqué pour la recherche **dense**
+> uniquement (keyword/BM25 + graphe restent sur la question FR). Comble l'écart question
+> FR / corpus+modèle EN. Mesure A/B locale (CE+PPR off) : **Hit@5 68→92 %, Recall@5 88→100 %**
+> (métrique non-aveugle, n=25) ; génération (n≈6, espacé) : faithfulness 0.46→0.87,
+> relevancy 0.76→0.88. Opt-in `HYDE=1` (activé en prod), +1 appel Groq/requête, fallback
+> gracieux sur la question brute si Groq HS. Prochaine étape naturelle : multi-query + RRF.
+> Restent ouverts : §2 multi-query/RAPTOR, §3 ANN local + graphe typé, §1 blurb LLM.

@@ -79,9 +79,17 @@ def run_evaluation(top_k: int = 5, verbose: bool = False) -> None:
         else None
     )
     entity_extractor = EntityExtractor.from_raw_documents(settings.raw_data_dir)
+    query_transformer = None
+    if settings.hyde:
+        from rag.generator import AnswerGenerator
+        from rag.prompt_builder import PromptBuilder
+        from rag.query_transformer import QueryTransformer
+
+        query_transformer = QueryTransformer(AnswerGenerator(settings, PromptBuilder()))
     ce_state = "ON" if cross_encoder else "OFF"
     ppr_state = "ON" if graph_ranker else "OFF"
-    print(f"OK ({time.time() - t0:.1f}s)  [cross-encoder: {ce_state} | PPR: {ppr_state}]\n")
+    hyde_state = "ON" if query_transformer else "OFF"
+    print(f"OK ({time.time() - t0:.1f}s)  [cross-encoder: {ce_state} | PPR: {ppr_state} | HyDE: {hyde_state}]\n")
 
     results: list[EvalResult] = []
     seed_hits = 0  # questions dont l'extraction seed >=1 entite attendue
@@ -94,7 +102,8 @@ def run_evaluation(top_k: int = 5, verbose: bool = False) -> None:
         entities = entity_extractor.extract(question)
         if any(exp in ent.lower() or ent.lower() in exp for ent in entities for exp in expected):
             seed_hits += 1
-        raw = retriever.retrieve(question=question, entities=entities, top_k=top_k * 3)
+        embed_text = query_transformer.hyde(question) if query_transformer else None
+        raw = retriever.retrieve(question=question, entities=entities, top_k=top_k * 3, embed_text=embed_text)
         reranked = reranker.rerank(raw)
         if cross_encoder:
             reranked = cross_encoder.rerank(question, reranked, settings.rerank_candidates)

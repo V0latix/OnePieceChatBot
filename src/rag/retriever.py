@@ -247,12 +247,17 @@ class HybridRetriever:
         entities: list[str] | None = None,
         filter_type: str | None = None,
         top_k: int | None = None,
+        embed_text: str | None = None,
     ) -> list[RetrievalResult]:
-        """Execute la recherche hybride pour une question."""
+        """Execute la recherche hybride pour une question.
+
+        `embed_text` (ex: passage HyDE) sert UNIQUEMENT a la recherche dense ; le
+        keyword/BM25 et le signal graphe restent sur la `question` originale.
+        """
         top_k = top_k or self.settings.retrieval_top_k
         entities = entities or []
 
-        query_embedding = self.embedder.embed_query(question)
+        query_embedding = self.embedder.embed_query(embed_text or question)
 
         # Sur-echantillonne dans les deux chemins : le filtrage bruit/categorie
         # s'applique APRES le fetch, donc il faut de la marge pour qu'il reste

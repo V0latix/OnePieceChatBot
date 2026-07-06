@@ -18,6 +18,7 @@ from rag.generator import AnswerGenerator
 from rag.graph_ranker import GraphRanker
 from rag.graph_retriever import GraphRetriever
 from rag.prompt_builder import PromptBuilder, grounded_ratio
+from rag.query_transformer import QueryTransformer
 from rag.reranker import CrossEncoderReranker, RRFReranker
 from rag.retriever import HybridRetriever, RetrievalResult
 from rag.spoiler_filter import filter_by_spoiler_limit
@@ -52,6 +53,7 @@ class RAGService:
         self._cross_encoder: CrossEncoderReranker | None = None
         self.prompt_builder = PromptBuilder()
         self.generator = AnswerGenerator(settings, self.prompt_builder)
+        self.query_transformer = QueryTransformer(self.generator)
         self.graph_retriever = GraphRetriever(settings)
 
     def _init_vector_store(self, settings: Settings) -> QdrantVectorStore | None:
@@ -102,6 +104,12 @@ class RAGService:
             )
         return self._retriever
 
+    def _embed_text(self, question: str) -> str | None:
+        """Texte a embarquer pour la recherche dense : passage HyDE si active, sinon None."""
+        if not self.settings.hyde:
+            return None
+        return self.query_transformer.hyde(question) or None
+
     def _rerank(self, query: str, results: list[RetrievalResult]) -> list[RetrievalResult]:
         """RRF puis, si active, cross-encoder sur le top-N (charge a la demande)."""
         reranked = self.reranker.rerank(results)
@@ -144,6 +152,7 @@ class RAGService:
             question=question,
             entities=entities,
             top_k=max(self.settings.retrieval_top_k * 3, self.settings.retrieval_top_k),
+            embed_text=self._embed_text(question),
         )
         reranked = self._rerank(question, retrieval_results)
         reranked = filter_by_spoiler_limit(reranked, spoiler_limit_arc)
@@ -201,6 +210,7 @@ class RAGService:
             question=question,
             entities=entities,
             top_k=max(self.settings.retrieval_top_k * 3, self.settings.retrieval_top_k),
+            embed_text=self._embed_text(question),
         )
         reranked = self._rerank(question, retrieval_results)
         reranked = filter_by_spoiler_limit(reranked, spoiler_limit_arc)
@@ -275,6 +285,7 @@ class RAGService:
             entities=self.entity_extractor.extract(query),
             filter_type=entity_type,
             top_k=max(self.settings.retrieval_top_k * 3, self.settings.retrieval_top_k),
+            embed_text=self._embed_text(query),
         )
         reranked = self._rerank(query, results)
         reranked = filter_by_spoiler_limit(reranked, spoiler_limit_arc)
