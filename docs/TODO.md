@@ -25,7 +25,7 @@ Faiblesses qui motivent ce backlog :
 | 7 | ~~Extraction d'entités rule-based~~ ✅ collisions résolues (prior d'importance) + alias hors-titre minés du lede ("Aokiji"→Kuzan, "Whitebeard"→Edward Newgate) | `src/rag/entity_extractor.py` |
 | 8 | ~~Citations non vérifiées~~ ✅ grounding programmatique (`grounded_ratio`) | `src/rag/prompt_builder.py` |
 | 9 | ~~Modèle Groq périmé~~ ✅ `llama-3.3-70b-versatile` | `src/config/settings.py` |
-| 10 | ~~Aucune évaluation~~ ✅ golden set + `06_eval` (Hit@K/Recall@K/seed) + `07_eval_ragas` (faithfulness/relevancy) | `data/eval/`, `scripts/` |
+| 10 | ~~Aucune évaluation~~ ✅ golden set **61 Q** (durci) + `06_eval` (Hit@K/Recall@K/seed, `--sleep`/`--limit`) + `07_eval_ragas` | `data/eval/`, `scripts/` |
 | 11 | ⚠️ Tests reranker ✅ + graph_ranker ✅ ; reste generator (chaîne fallback) / graph_retriever | `tests/` |
 
 ---
@@ -197,4 +197,12 @@ Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriqu
 > (métrique non-aveugle, n=25) ; génération (n≈6, espacé) : faithfulness 0.46→0.87,
 > relevancy 0.76→0.88. Opt-in `HYDE=1` (activé en prod), +1 appel Groq/requête, fallback
 > gracieux sur la question brute si Groq HS. Prochaine étape naturelle : multi-query + RRF.
-> Restent ouverts : §2 multi-query/RAPTOR, §3 ANN local + graphe typé, §1 blurb LLM.
+> **Fait (§0 golden set durci) :** 25 → **61 questions** (ajout descriptive-sans-nom,
+> multi-hop, disambiguation/vrai-nom, devil-fruit, global, spoiler, faction). Motif : HyDE
+> avait **saturé** l'ancien set (Recall@5 100 %), plus rien à mesurer. Nouveau plancher
+> **sans Groq (HYDE/CE off) : Hit@5 52,5 %, Recall@5 67,2 %, seed 52,5 %** (n=61) → la
+> résolution est revenue. `06_eval` gagne `--sleep`/`--limit`. **HyDE sur le set durci = à
+> mesurer** (quota journalier Groq free épuisé pendant la session ; relancer avec
+> `HYDE=1 06_eval --sleep 8` quand le quota se réinitialise). Le gain HyDE prouvé reste
+> celui du set n=25 (Hit@5 68→92 %, Recall@5 88→100 %).
+> Restent ouverts : mesurer HyDE/CE sur n=61, §2 multi-query/RAPTOR, §3 ANN local + graphe typé.

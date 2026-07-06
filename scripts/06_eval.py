@@ -43,12 +43,14 @@ class EvalResult:
     retrieved_entities: list[str]
 
 
-def run_evaluation(top_k: int = 5, verbose: bool = False) -> None:
+def run_evaluation(top_k: int = 5, verbose: bool = False, sleep: float = 0.0, limit: int | None = None) -> None:
     configure_logging("WARNING")
     logger = get_logger(__name__)
 
     settings = get_settings()
     golden = eval_common.load_golden(settings.data_dir / "eval" / "golden.jsonl")
+    if limit:
+        golden = golden[:limit]
     print(f"\n{'='*60}")
     print(f"  One Piece RAG — Evaluation retrieval (top-K={top_k})")
     print(f"  Questions: {len(golden)}")
@@ -132,6 +134,8 @@ def run_evaluation(top_k: int = 5, verbose: bool = False) -> None:
         status = "HIT" if hit else ("RECALL" if recall else "MISS")
         if verbose or not hit:
             print(f"[{i:02d}/{len(golden)}] {status:6s} | {question[:55]:<55} | top3: {result.retrieved_entities}")
+        if sleep:
+            time.sleep(sleep)  # espace les appels Groq (HyDE) pour menager le rate limit
 
     # Metriques globales
     n = len(results)
@@ -160,8 +164,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluation du pipeline RAG One Piece")
     parser.add_argument("--top-k", type=int, default=5, help="Nombre de resultats a evaluer (defaut: 5)")
     parser.add_argument("--verbose", action="store_true", help="Afficher tous les resultats (pas seulement les echecs)")
+    parser.add_argument("--sleep", type=float, default=0.0, help="Pause (s) entre questions (menage le rate limit Groq/HyDE)")
+    parser.add_argument("--limit", type=int, default=None, help="Limiter le nombre de questions")
     args = parser.parse_args()
-    run_evaluation(top_k=args.top_k, verbose=args.verbose)
+    run_evaluation(top_k=args.top_k, verbose=args.verbose, sleep=args.sleep, limit=args.limit)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
 # Golden set — eval retrieval + generation du RAG One Piece.
 # Un objet JSON par ligne. Lignes vides ou commencant par '#' ignorees.
 # Champs : question | expected_entities (au moins une doit etre retrouvee) | primary (entite principale) | category
-# Pour agrandir : ajoute une ligne. Categories : factual, multi-hop, global, canon, spoiler.
+# Pour agrandir : ajoute une ligne. Categories : factual, multi-hop, global, canon, spoiler,
+# descriptive (sans nom d'entite), disambiguation (vrai nom), devil-fruit, faction.
 # Regle : n'ajoute que des entites que le retrieval DEVRAIT remonter (pas de reponse inventee).
 {"question": "Qui est le capitaine des Mugiwara no Ichimi ?", "expected_entities": ["Monkey D. Luffy", "Luffy", "Straw Hat Pirates"], "primary": "Luffy", "category": "factual"}
 {"question": "Quel est le fruit du demon de Luffy ?", "expected_entities": ["Gomu Gomu no Mi", "Luffy", "Hito Hito no Mi"], "primary": "Luffy", "category": "factual"}
@@ -28,3 +29,39 @@
 {"question": "Qui est Trafalgar Law ?", "expected_entities": ["Trafalgar D. Water Law", "Trafalgar Law", "Law", "Heart Pirates"], "primary": "Law", "category": "canon"}
 {"question": "Qui est le pere de Portgas D. Ace ?", "expected_entities": ["Gol D. Roger", "Roger", "Portgas D. Ace", "Ace"], "primary": "Roger", "category": "spoiler"}
 {"question": "Quel fruit du demon possede Marshall D. Teach ?", "expected_entities": ["Marshall D. Teach", "Blackbeard", "Yami Yami no Mi", "Gura Gura no Mi"], "primary": "Blackbeard", "category": "spoiler"}
+{"question": "Quel amiral de la Marine peut se transformer en magma ?", "expected_entities": ["Sakazuki", "Akainu"], "primary": "Sakazuki", "category": "descriptive"}
+{"question": "Quel personnage combat avec trois sabres ?", "expected_entities": ["Roronoa Zoro", "Zoro"], "primary": "Zoro", "category": "descriptive"}
+{"question": "Quel est le cuisinier de l'equipage au chapeau de paille ?", "expected_entities": ["Sanji", "Vinsmoke Sanji"], "primary": "Sanji", "category": "descriptive"}
+{"question": "Quel epeiste est considere comme le plus fort du monde ?", "expected_entities": ["Dracule Mihawk", "Mihawk"], "primary": "Mihawk", "category": "descriptive"}
+{"question": "Quel personnage possede un fruit du demon de glace ?", "expected_entities": ["Kuzan", "Aokiji"], "primary": "Kuzan", "category": "descriptive"}
+{"question": "Quel personnage est un squelette musicien ?", "expected_entities": ["Brook"], "primary": "Brook", "category": "descriptive"}
+{"question": "Quel medecin de l'equipage est un renne ?", "expected_entities": ["Tony Tony Chopper", "Chopper"], "primary": "Chopper", "category": "descriptive"}
+{"question": "Qui est le grand-pere de Monkey D. Luffy ?", "expected_entities": ["Monkey D. Garp", "Garp"], "primary": "Garp", "category": "multi-hop"}
+{"question": "Quel Empereur a confie son chapeau de paille a Luffy ?", "expected_entities": ["Shanks", "Red Hair Pirates"], "primary": "Shanks", "category": "multi-hop"}
+{"question": "Qui a entraine Zoro pendant les deux ans d'ellipse ?", "expected_entities": ["Dracule Mihawk", "Mihawk"], "primary": "Mihawk", "category": "multi-hop"}
+{"question": "Qui a tue Portgas D. Ace a Marineford ?", "expected_entities": ["Sakazuki", "Akainu"], "primary": "Sakazuki", "category": "multi-hop"}
+{"question": "Quel personnage est le frere jure de Luffy et Ace ?", "expected_entities": ["Sabo"], "primary": "Sabo", "category": "multi-hop"}
+{"question": "Qui est le fils de Monkey D. Dragon ?", "expected_entities": ["Monkey D. Luffy", "Luffy"], "primary": "Luffy", "category": "multi-hop"}
+{"question": "Qui est le commandant de la premiere division de Barbe Blanche ?", "expected_entities": ["Marco", "Whitebeard Pirates"], "primary": "Marco", "category": "multi-hop"}
+{"question": "Quel est le vrai nom de Big Mom ?", "expected_entities": ["Charlotte Linlin", "Big Mom"], "primary": "Charlotte Linlin", "category": "disambiguation"}
+{"question": "Quel est le vrai nom de l'amiral Akainu ?", "expected_entities": ["Sakazuki", "Akainu"], "primary": "Sakazuki", "category": "disambiguation"}
+{"question": "Quel est le vrai nom de Barbe Blanche ?", "expected_entities": ["Edward Newgate", "Whitebeard"], "primary": "Edward Newgate", "category": "disambiguation"}
+{"question": "Quel est le vrai nom de Corazon, le frere de Doflamingo ?", "expected_entities": ["Donquixote Rosinante", "Rosinante", "Corazon"], "primary": "Rosinante", "category": "disambiguation"}
+{"question": "Quel fruit du demon a mange Trafalgar Law ?", "expected_entities": ["Ope Ope no Mi", "Trafalgar D. Water Law", "Law"], "primary": "Ope Ope no Mi", "category": "devil-fruit"}
+{"question": "Quel fruit du demon permet de manipuler les ombres ?", "expected_entities": ["Kage Kage no Mi", "Gecko Moria"], "primary": "Kage Kage no Mi", "category": "devil-fruit"}
+{"question": "Quel fruit du demon a mange Brook ?", "expected_entities": ["Yomi Yomi no Mi", "Brook"], "primary": "Yomi Yomi no Mi", "category": "devil-fruit"}
+{"question": "Quel fruit du demon a mange Crocodile ?", "expected_entities": ["Suna Suna no Mi", "Crocodile"], "primary": "Suna Suna no Mi", "category": "devil-fruit"}
+{"question": "Quel deuxieme fruit du demon Marshall D. Teach a-t-il vole a Barbe Blanche ?", "expected_entities": ["Gura Gura no Mi", "Marshall D. Teach", "Blackbeard", "Whitebeard"], "primary": "Gura Gura no Mi", "category": "devil-fruit"}
+{"question": "Quels sont les Quatre Empereurs de la mer ?", "expected_entities": ["Yonko", "Four Emperors", "Shanks", "Kaido", "Big Mom", "Blackbeard"], "primary": "Yonko", "category": "global"}
+{"question": "Qu'est-ce qu'un Poneglyphe ?", "expected_entities": ["Poneglyph", "Poneglyphs"], "primary": "Poneglyph", "category": "global"}
+{"question": "Qu'est-ce que le Haki de l'observation ?", "expected_entities": ["Haki", "Observation Haki", "Kenbunshoku Haki"], "primary": "Haki", "category": "global"}
+{"question": "Resume la guerre au sommet de Marineford.", "expected_entities": ["Marineford", "Whitebeard", "Ace", "Sakazuki", "Luffy"], "primary": "Marineford", "category": "global"}
+{"question": "Qu'est-ce que le Gomu Gomu no Mi ?", "expected_entities": ["Gomu Gomu no Mi", "Monkey D. Luffy", "Hito Hito no Mi"], "primary": "Gomu Gomu no Mi", "category": "global"}
+{"question": "Qu'est-ce que le Grand Line ?", "expected_entities": ["Grand Line"], "primary": "Grand Line", "category": "global"}
+{"question": "Qui est Joy Boy ?", "expected_entities": ["Joy Boy", "Monkey D. Luffy"], "primary": "Joy Boy", "category": "spoiler"}
+{"question": "Quel est le vrai nom du fruit du demon de Luffy ?", "expected_entities": ["Hito Hito no Mi", "Gomu Gomu no Mi", "Nika"], "primary": "Hito Hito no Mi", "category": "spoiler"}
+{"question": "Quelle est la derniere ile de Grand Line ou se trouve le One Piece ?", "expected_entities": ["Laugh Tale", "Raftel"], "primary": "Laugh Tale", "category": "spoiler"}
+{"question": "Qui etait le Roi des Pirates ?", "expected_entities": ["Gol D. Roger", "Roger"], "primary": "Gol D. Roger", "category": "spoiler"}
+{"question": "Qui dirige l'Armee Revolutionnaire ?", "expected_entities": ["Monkey D. Dragon", "Dragon", "Revolutionary Army"], "primary": "Monkey D. Dragon", "category": "faction"}
+{"question": "Quelle organisation militaire sert le Gouvernement Mondial ?", "expected_entities": ["Marines", "World Government"], "primary": "Marines", "category": "faction"}
+{"question": "Quel est le nom de la grande prison sous-marine du Gouvernement Mondial ?", "expected_entities": ["Impel Down"], "primary": "Impel Down", "category": "faction"}
