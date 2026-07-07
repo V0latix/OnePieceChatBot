@@ -241,6 +241,29 @@ class HybridRetriever:
             )
         ]
 
+    def _vector_search(self, embedding: list[float], filter_type: str | None, candidate_k: int) -> list[RetrievalResult]:
+        """Recherche dense : Qdrant distant, avec repli sur l'index cosinus local."""
+        results = self._remote_vector_search(embedding, filter_type, candidate_k)
+        if not results:
+            results = self._local_vector_search(embedding, filter_type, candidate_k)
+        return results
+
+    def _dual_vector_search(
+        self, question: str, hyde_text: str, filter_type: str | None, candidate_k: int
+    ) -> list[RetrievalResult]:
+        """Union de deux recherches denses (question + passage HyDE), max-cosinus par chunk.
+
+        Le score reste un cosinus (meme echelle) -> la confiance (moyenne des vector_score)
+        et le RRF du reranker restent valides.
+        """
+        merged: dict[str, RetrievalResult] = {}
+        for text in (question, hyde_text):
+            for result in self._vector_search(self.embedder.embed_query(text), filter_type, candidate_k):
+                existing = merged.get(result.chunk_id)
+                if existing is None or result.vector_score > existing.vector_score:
+                    merged[result.chunk_id] = result
+        return list(merged.values())
+
     def retrieve(
         self,
         question: str,
@@ -257,15 +280,17 @@ class HybridRetriever:
         top_k = top_k or self.settings.retrieval_top_k
         entities = entities or []
 
-        query_embedding = self.embedder.embed_query(embed_text or question)
-
         # Sur-echantillonne dans les deux chemins : le filtrage bruit/categorie
         # s'applique APRES le fetch, donc il faut de la marge pour qu'il reste
         # assez de bons resultats a reranker.
         candidate_k = max(top_k * 3, top_k)
-        vector_results = self._remote_vector_search(query_embedding, filter_type, candidate_k)
-        if not vector_results:
-            vector_results = self._local_vector_search(query_embedding, filter_type, candidate_k)
+        if self.settings.hyde_dual and embed_text and embed_text != question:
+            # Fusion HyDE : recherche dense sur la question ET sur le passage HyDE,
+            # union par max-cosinus (recupere ce que chaque requete trouve seule).
+            vector_results = self._dual_vector_search(question, embed_text, filter_type, candidate_k)
+        else:
+            query_embedding = self.embedder.embed_query(embed_text or question)
+            vector_results = self._vector_search(query_embedding, filter_type, candidate_k)
 
         query_terms = set(term.lower() for term in _WORD_RE.findall(question) if len(term) >= 3)
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from config.settings import get_settings
+from config.settings import Settings, get_settings
 from rag.retriever import HybridRetriever, _graph_match, _is_noise_entity, _is_noise_section
 
 
@@ -38,6 +38,58 @@ def _one_chunk_index(tmp_path):
     with index_path.open("w", encoding="utf-8") as handle:
         handle.write(json.dumps(row) + "\n")
     return index_path
+
+
+class _MapEmbedder:
+    """Embedder texte->vecteur (table), enregistre les appels (test dual retrieval)."""
+
+    def __init__(self, mapping: dict) -> None:
+        self.mapping = mapping
+        self.calls: list[str] = []
+
+    def embed_query(self, query: str) -> list[float]:
+        self.calls.append(query)
+        return self.mapping.get(query, [0.0, 0.0])
+
+
+def _two_chunk_index(tmp_path):
+    index_path = tmp_path / "chunks_with_embeddings.jsonl"
+    rows = [
+        {"chunk_id": "A", "entity_id": "a", "entity_name": "A", "entity_type": "character",
+         "section": "overview", "content": "aaa", "categories": ["Characters"],
+         "related_entities": [], "token_count": 1, "source_url": "x", "embedding": [1.0, 0.0]},
+        {"chunk_id": "B", "entity_id": "b", "entity_name": "B", "entity_type": "character",
+         "section": "overview", "content": "bbb", "categories": ["Characters"],
+         "related_entities": [], "token_count": 1, "source_url": "x", "embedding": [0.0, 1.0]},
+    ]
+    with index_path.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row) + "\n")
+    return index_path
+
+
+def test_dual_retrieval_rescues_question_match(tmp_path) -> None:
+    # question->A, hyde->B. En dual, A (match question) doit etre remonte au max cosinus.
+    embedder = _MapEmbedder({"question": [1.0, 0.0], "hyde": [0.0, 1.0]})
+    retriever = HybridRetriever(
+        settings=Settings(hyde_dual=True), embedder=embedder, vector_store=None,
+        local_embeddings_path=_two_chunk_index(tmp_path),
+    )
+    results = retriever.retrieve("question", entities=[], top_k=5, embed_text="hyde")
+    assert "question" in embedder.calls and "hyde" in embedder.calls  # les deux embarques
+    by_id = {r.chunk_id: r for r in results}
+    assert by_id["A"].vector_score == 1.0  # A recupere via la question
+    assert by_id["B"].vector_score == 1.0  # B via HyDE
+
+
+def test_dual_off_embeds_only_hyde(tmp_path) -> None:
+    embedder = _MapEmbedder({"question": [1.0, 0.0], "hyde": [0.0, 1.0]})
+    retriever = HybridRetriever(
+        settings=Settings(hyde_dual=False), embedder=embedder, vector_store=None,
+        local_embeddings_path=_two_chunk_index(tmp_path),
+    )
+    retriever.retrieve("question", entities=[], top_k=5, embed_text="hyde")
+    assert embedder.calls == ["hyde"]  # seul le passage HyDE est embarque (single)
 
 
 def test_embed_text_isolated_to_dense_channel(tmp_path) -> None:

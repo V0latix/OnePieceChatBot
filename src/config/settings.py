@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     # HyDE : embarque un passage hypothetique anglais (genere par Groq) pour la recherche
     # dense, comblant l'ecart question FR / corpus EN. +1 appel Groq / requete. OFF (mesurer).
     hyde: bool = Field(default=False, alias="HYDE")
+    # Dual retrieval : recherche dense sur la question ET le passage HyDE, fusionnees.
+    # Aucun appel Groq supplementaire (2 recherches denses seulement). OFF (mesurer).
+    hyde_dual: bool = Field(default=False, alias="HYDE_DUAL")
 
     data_dir: Path = Path("data")
     raw_data_dir: Path = Path("data/raw")

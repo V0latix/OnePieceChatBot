@@ -202,12 +202,17 @@ Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriqu
 > avait **saturé** l'ancien set (Recall@5 100 %), plus rien à mesurer. Nouveau plancher
 > **sans Groq (HYDE/CE off) : Hit@5 52,5 %, Recall@5 67,2 %, seed 52,5 %** (n=61) → la
 > résolution est revenue. `06_eval` gagne `--sleep`/`--limit`.
-> **HyDE sur le set durci (partiel, borne basse) :** quota journalier Groq free quasi
-> épuisé → run partiel (≈moitié des questions ont eu HyDE avant les 429) : **Hit@5
-> ~60,7 %, Recall@5 ~73,8 %** vs baseline 52,5 %/67,2 %. Donc HyDE aide AUSSI sur les
-> questions dures (+8 Hit / +6,6 Recall même à moitié appliqué → vrai gain ≥ ça), moins
-> spectaculaire que sur le set facile (questions plus dures). Chiffre net complet à
-> relancer quota réinitialisé : `HYDE=1 06_eval --sleep 8`.
+> **HyDE sur le set durci (NET, n=61, 0 rate-limit) :** **Hit@5 52,5→83,6 %, Recall@5
+> 67,2→90,2 %** (CE off). HyDE = +31 Hit / +23 Recall même sur les questions dures ; pas
+> saturé (90,2 %) donc marge mesurable. Les 6 recall-misses restants = descriptif/sémantique
+> ("trois sabres"→"Tontatta Combat", "ombres/shadow"→"Yami Yami/darkness") + 1 global.
+> **Dual retrieval (implémenté, NON mesuré — quota Groq épuisé) :** `retrieve()` fusionne
+> la recherche dense sur la question ET le passage HyDE (max-cosinus), au lieu d'embarquer
+> le seul passage HyDE. **0 appel Groq en plus** (2 recherches denses). Toggle `HYDE_DUAL`
+> OFF par défaut, suite 171 verte. A/B à faire quota réinitialisé :
+> `HYDE=1 HYDE_DUAL=1 06_eval --sleep 5` vs `HYDE_DUAL=0` (baseline 83,6/90,2).
+> **Contrainte structurelle : le quota journalier Groq free est le vrai goulot** — 2 jours
+> de suite la mesure a été bloquée. Tier payant = le déblocage à plus forte valeur.
 > **Fait (#11 tests, sans Groq) :** `test_generator.py` (chaîne Groq→Ollama→snippet +
 > fallback streaming) et `test_graph_retriever.py` (parsing Cypher relations/subgraph +
 > dédup + dégradation gracieuse Neo4j down). Suite 157→169 verte. Ferme le dernier ⚠️ #11.
