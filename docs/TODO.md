@@ -44,26 +44,26 @@ Faiblesses qui motivent ce backlog :
 
 ## 1. Tier 1 — meilleur ratio impact/effort
 
-- **Contextual Retrieval (Anthropic).** Préfixer chaque chunk d'un blurb LLM d'1–2 phrases
+- ❌ **Contextual Retrieval (Anthropic).** *(v1 templaté testé → régresse Hit@5 68→52 %, rollback ; blurb LLM restant à tester)* Préfixer chaque chunk d'un blurb LLM d'1–2 phrases
   ("où ce passage se situe dans la page") **avant** embedding et indexation BM25.
   - **Gain :** −35 % d'échecs de retrieval (embeddings seuls), −49 % avec BM25 contextuel.
   - **Coût :** passe offline unique via Groq/Ollama (gratuit) ; prompt caching si API payante.
   - **Fichiers :** `src/processing/chunker.py`, `src/processing/embedder.py`.
   - **Source :** https://www.anthropic.com/engineering/contextual-retrieval
 
-- **Fusion RRF** à la place de la somme pondérée. Fusionner vecteur + BM25 (+ graphe) **par rang** :
+- ✅ **Fusion RRF** à la place de la somme pondérée. Fusionner vecteur + BM25 (+ graphe) **par rang** :
   `score = Σ 1/(k + rang)`, k≈60. Robuste aux scores d'échelles différentes (cosinus vs ratio vs binaire).
   - **Gain :** bat systématiquement la pondération manuelle ; plus de poids à régler à la main.
   - **Coût :** trivial, Python pur. Garder une variante *weighted RRF* si on veut biaiser le graphe.
   - **Fichiers :** `src/rag/reranker.py`, `src/rag/retriever.py`.
   - **Source :** https://opensearch.org/blog/introducing-reciprocal-rank-fusion-hybrid-search/
 
-- **Vrai BM25** en remplacement du ratio d'overlap (TF + IDF, vs simple intersection d'ensembles).
+- ✅ **Vrai BM25** en remplacement du ratio d'overlap (TF + IDF, vs simple intersection d'ensembles).
   - **Gain :** meilleur rappel lexical, gère fréquence et rareté des termes.
   - **Coût :** faible. Deux options : **sparse vectors Qdrant** (indexé côté serveur) ou `rank_bm25` local.
   - **Fichiers :** `src/rag/retriever.py`, `src/processing/vector_store.py`.
 
-- **Cross-encoder `bge-reranker-v2-m3`** en 2e étage. Retrieve top-50 → rerank (query, chunk) → garder 8–10.
+- ✅ **Cross-encoder `bge-reranker-v2-m3`** en 2e étage (opt-in `RERANK_CROSS_ENCODER=1` ; A/B : faithfulness 0.50→0.63, relevancy 0.56→0.81). Retrieve top-50 → rerank (query, chunk) → garder 8–10.
   - **Gain :** le plus gros lift unitaire dans la plupart des ablations RAG (c'est l'étape "+reranking → −67 %").
   - **Coût :** modèle 0.6B, tourne en fp16 (`FlagReranker(use_fp16=True)`) ou MLX sur M4. Plafonner le
     nombre de candidats car scoring par paire plus lent.
@@ -74,7 +74,7 @@ Faiblesses qui motivent ce backlog :
 
 ## 2. Tier 2 — gains ciblés
 
-- **Personalized PageRank (HippoRAG).** Seeder un PPR sur le graphe Neo4j depuis les entités
+- ⚠️ **Personalized PageRank (HippoRAG).** *(implémenté `graph_ranker.py`, NetworkX ; A/B : effet nul — graphe co-occurrence non typé ; laissé OFF, à revisiter après graphe typé)* Seeder un PPR sur le graphe Neo4j depuis les entités
   extraites de la question, classer les passages par proximité graphe.
   - **Gain :** intègre enfin le graphe au **classement** (aujourd'hui il ne sert qu'au prompt) ;
     fort sur les questions multi-hop ("comment X est lié à Y") sans appel LLM supplémentaire.
@@ -83,15 +83,15 @@ Faiblesses qui motivent ce backlog :
   - **Fichiers :** `src/rag/graph_retriever.py`, `src/rag/retriever.py`.
   - **Source :** https://github.com/OSU-NLP-Group/HippoRAG
 
-- **Query transformation** (activée selon le type de question, pas systématique) :
-  - **Multi-query + RRF** par défaut : le LLM écrit 3–4 reformulations, on retrieve chacune et on fusionne.
-  - **Décomposition** si un routeur détecte une question multi-parties ("compare X et Y").
-  - **HyDE** pour les questions descriptives (générer une réponse hypothétique, embarquer celle-ci).
+- 🟡 **Query transformation** (activée selon le type de question, pas systématique) :
+  - ⬜ **Multi-query + RRF** : le LLM écrit 3–4 reformulations, on retrieve chacune et on fusionne. *(déconseillé : chevauche HyDE + 3-4× Groq/requête = aggrave le goulot TPD)*
+  - ⬜ **Décomposition** si un routeur détecte une question multi-parties ("compare X et Y").
+  - ✅ **HyDE** (`query_transformer.py`, opt-in `HYDE=1`) — **plus gros gain** : Hit@5 52,5→83,6 %, Recall@5 67,2→90,2 % (n=61 durci). Dual HyDE+question testé → rejeté.
   - **Gain :** rappel/couverture d'intention en hausse. **Coût :** 1+ appel LLM Groq + latence.
   - **Fichiers :** nouveau `src/rag/query_transformer.py`, branché dans `RAGService`.
   - **Source :** https://arxiv.org/pdf/2404.01037 (ARAGOG)
 
-- **Résumés hiérarchiques (RAPTOR) + community summaries (GraphRAG global).** Construire offline des
+- ⬜ **Résumés hiérarchiques (RAPTOR) + community summaries (GraphRAG global).** *(à faire — cible les questions globales que le RAG plat rate)* Construire offline des
   nœuds "résumé d'arc / de personnage / de thème" et les ajouter à Qdrant + Neo4j.
   - **Gain :** répond aux questions **globales** que le RAG plat rate ("résume l'arc de Marineford",
     "comment évolue l'équipage de Luffy").
@@ -103,22 +103,21 @@ Faiblesses qui motivent ce backlog :
 
 ## 3. Tier 3 — robustesse & qualité
 
-- **Grounding des citations.** Vérifier après génération que chaque `[i]` cité correspond à un
+- ✅ **Grounding des citations** (`grounded_ratio`). Vérifier après génération que chaque `[i]` cité correspond à un
   chunk réellement fourni ; sinon signaler / abaisser la confiance.
   - **Fichiers :** `src/rag/prompt_builder.py`, post-génération dans `src/rag/generator.py`.
 
-- **Entités : fuzzy matching** (`rapidfuzz`) + éventuel NER léger pour tolérer fautes de frappe et
-  alias non listés (ex. "Zolo" vs "Zoro").
+- ✅ **Entités : fuzzy matching** (`difflib`, pas `rapidfuzz`) + résolution de collisions (prior d'importance) + alias hors-titre minés du lede. Tolère fautes de frappe et
+  alias non listés (ex. "Zolo" vs "Zoro", "Aokiji"→Kuzan).
   - **Fichiers :** `src/rag/entity_extractor.py`.
 
-- **Corriger le modèle Groq périmé** (`llama-3.1-70b-versatile` → `llama-3.3-70b-versatile`) et
-  documenter clairement le fallback. Déjà noté dans CLAUDE.md — à câbler proprement.
+- ✅ **Corriger le modèle Groq périmé** (`llama-3.1-70b-versatile` → `llama-3.3-70b-versatile`) + `GROQ_FAST_MODEL=llama-3.1-8b-instant` pour le juge d'eval.
   - **Fichiers :** `src/config/settings.py`, `.env.example`.
 
-- **ANN local** (`hnswlib` ou `faiss`) pour le fallback hors-ligne, au lieu du cosinus O(N) Python.
+- ⬜ **ANN local** (`hnswlib` ou `faiss`) pour le fallback hors-ligne, au lieu du cosinus O(N) Python. *(faible valeur : perf seule, fallback rarement emprunté, ajoute une dép)*
   - **Fichiers :** `src/rag/retriever.py`.
 
-- **Tests manquants** : reranker (formule/tri), chaîne de fallback du generator, graph_retriever mické.
+- ✅ **Tests manquants** : reranker, graph_ranker, chaîne de fallback du generator, graph_retriever mické (suite 172).
   - **Fichiers :** `tests/`.
 
 ---
@@ -147,8 +146,12 @@ rapide que llama.cpp** sur workloads d'embedding Apple Silicon.
 3. ❌ **Contextual retrieval v1** (préfixe templaté, `chunker.py`) — testé, **régresse** (Hit@5 68→52 %), rollback ; blurb LLM à tester
 4. ✅ **bge-reranker-v2-m3** en 2e étage (`CrossEncoderReranker`, opt-in `RERANK_CROSS_ENCODER=1`) — fait
 5. ⚠️ **PPR graphe** (`graph_ranker.py`, opt-in `GRAPH_PPR=1`) — implémenté mais **effet non prouvé** (graphe co-occurrence dégénéré), laissé OFF
-6. **Résumés RAPTOR + community summaries** (offline)
-7. ✅ **HyDE** (§2 query transformation, `query_transformer.py`, opt-in `HYDE=1`) — **plus gros gain** (Hit@5 68→92 %, Recall@5 88→100 %)
+6. ⬜ **Résumés RAPTOR + community summaries** (offline)
+7. ✅ **HyDE** (§2 query transformation, `query_transformer.py`, opt-in `HYDE=1`) — **plus gros gain** (Hit@5 68→92 % facile / 52,5→83,6 % durci)
+8. ✅ **Golden set durci** 25→61 Q (regagne la résolution après saturation HyDE)
+9. ❌ **Dual retrieval** HyDE+question (mesuré, plat/négatif, OFF)
+10. ✅ **Routage modèle** juge d'eval → 8b (libère le budget TPD ; HyDE reste 70b après A/B)
+11. ✅ **Tests #11** generator (fallback) + graph_retriever
 
 Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriques RAGAS.
 
