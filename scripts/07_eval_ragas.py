@@ -69,10 +69,10 @@ def run(limit: int | None, sleep: float, verbose: bool) -> None:
         context = service.prompt_builder.build_context(results, top_k=settings.retrieval_top_k)
 
         faith = eval_common.judge_score(
-            gen, _FAITHFULNESS_INSTR, f"CONTEXTE:\n{context}\n\nREPONSE:\n{answer}"
+            gen, _FAITHFULNESS_INSTR, f"CONTEXTE:\n{context}\n\nREPONSE:\n{answer}", model=settings.groq_fast_model
         )
         relev = eval_common.judge_score(
-            gen, _RELEVANCY_INSTR, f"QUESTION:\n{question}\n\nREPONSE:\n{answer}"
+            gen, _RELEVANCY_INSTR, f"QUESTION:\n{question}\n\nREPONSE:\n{answer}", model=settings.groq_fast_model
         )
         if faith >= 0:
             faith_scores.append(faith)

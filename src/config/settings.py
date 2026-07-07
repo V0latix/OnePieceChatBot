@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     embedding_model: str = Field(default="BAAI/bge-large-en-v1.5", alias="EMBEDDING_MODEL")
     llm_model: str | None = Field(default=None, alias="LLM_MODEL")
     groq_model: str = Field(default="llama-3.3-70b-versatile", alias="GROQ_MODEL")
+    # Modele leger pour le JUGE d'eval (07) : sort juste un score 0-1, le 8b suffit et
+    # economise le budget TPD du 70b. NB: HyDE reste sur le 70b (mesure : 8b degrade le
+    # retrieval, Hit@5 83.6->75.4 %). TPD 8b 500K vs 70b 100K.
+    groq_fast_model: str = Field(default="llama-3.1-8b-instant", alias="GROQ_FAST_MODEL")
     ollama_model: str | None = Field(default=None, alias="OLLAMA_MODEL")
     chunk_size: int = Field(default=500, alias="CHUNK_SIZE")
     chunk_overlap: int = Field(default=50, alias="CHUNK_OVERLAP")

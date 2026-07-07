@@ -11,10 +11,11 @@ class _StubGen:
         self.boom = boom
         self.messages = None
 
-    def _generate_with_groq(self, messages):  # noqa: ANN001, ANN202
+    def _generate_with_groq(self, messages, model=None):  # noqa: ANN001, ANN202
         if self.boom:
             raise RuntimeError("groq down")
         self.messages = messages
+        self.model = model
         return self.reply
 
 
@@ -30,3 +31,9 @@ def test_hyde_degrades_to_empty_on_failure() -> None:
 
 def test_hyde_empty_when_llm_returns_none() -> None:
     assert QueryTransformer(_StubGen(reply=None)).hyde("Qui est Zoro ?") == ""
+
+
+def test_hyde_routes_fast_model() -> None:
+    stub = _StubGen(reply="passage")
+    QueryTransformer(stub, model="llama-3.1-8b-instant").hyde("Q")
+    assert stub.model == "llama-3.1-8b-instant"

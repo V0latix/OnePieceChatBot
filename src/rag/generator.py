@@ -26,7 +26,7 @@ class AnswerGenerator:
         self._cb_groq = CircuitBreaker("groq", failure_threshold=3, recovery_timeout=60.0)
         self._cb_ollama = CircuitBreaker("ollama", failure_threshold=3, recovery_timeout=30.0)
 
-    def _generate_with_groq(self, messages: list[dict[str, str]]) -> str:
+    def _generate_with_groq(self, messages: list[dict[str, str]], model: str | None = None) -> str:
         if not self.settings.groq_api_key:
             raise RuntimeError("GROQ_API_KEY absent")
 
@@ -34,7 +34,7 @@ class AnswerGenerator:
         try:
             client = Groq(api_key=self.settings.groq_api_key, timeout=_GROQ_TIMEOUT)
             completion = client.chat.completions.create(
-                model=self.settings.groq_model,
+                model=model or self.settings.groq_model,
                 messages=messages,
                 temperature=0.3,
                 max_tokens=2048,

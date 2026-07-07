@@ -23,8 +23,9 @@ _HYDE_SYSTEM = (
 class QueryTransformer:
     """Transforme la question avant retrieval. Reutilise le client Groq du generator."""
 
-    def __init__(self, generator: Any) -> None:
+    def __init__(self, generator: Any, model: str | None = None) -> None:
         self.generator = generator
+        self.model = model  # modele leger (ex: llama-3.1-8b-instant) ; None -> defaut generator
 
     def hyde(self, question: str) -> str:
         """Retourne un passage hypothetique anglais, ou "" si le LLM echoue."""
@@ -33,7 +34,7 @@ class QueryTransformer:
             {"role": "user", "content": question},
         ]
         try:
-            return (self.generator._generate_with_groq(messages) or "").strip()
+            return (self.generator._generate_with_groq(messages, model=self.model) or "").strip()
         except Exception as exc:  # noqa: BLE001 - degradation gracieuse -> question brute
             _logger.warning("HyDE indisponible (%s): fallback sur la question brute", exc)
             return ""

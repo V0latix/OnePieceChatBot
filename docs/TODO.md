@@ -214,8 +214,11 @@ Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriqu
 > HyDE seul était déjà le meilleur des deux. Toggle `HYDE_DUAL` gardé OFF, code tésté (suite 173).
 > **Contrainte Groq free (limites `llama-3.3-70b` : RPD 1K, TPD 100K, RPM 30, TPM 12K) :**
 > le goulot est le **TPD (100K tokens/j)** — bouffé par l'eval génération (`07`, réponses
-> 2048 tok + juges), pas par les evals retrieval (HyDE léger ~200 tok). Piste : router HyDE
-> + juge vers `llama-3.1-8b-instant` (TPD 500K, RPD 14,4K) pour libérer le budget.
+> 2048 tok + juges), pas par l'eval retrieval (HyDE léger ~200 tok, 61 Q ≈ 12K tok OK).
+> **Fait (routage modèle, A/B) :** `GROQ_FAST_MODEL=llama-3.1-8b-instant` (TPD 500K).
+> A/B **HyDE 8b vs 70b** : le 8b **dégrade** (Hit@5 83,6→75,4 %, Recall@5 90,2→83,6 %) → HyDE
+> **reste sur le 70b**. En revanche le **juge** (07) passe au 8b (sort juste un score ; testé :
+> réponse fidèle→0,9, hallucinée→0,0) → libère ~2K tok/question du budget 70b. Suite 172 verte.
 > **Fait (#11 tests, sans Groq) :** `test_generator.py` (chaîne Groq→Ollama→snippet +
 > fallback streaming) et `test_graph_retriever.py` (parsing Cypher relations/subgraph +
 > dédup + dégradation gracieuse Neo4j down). Suite 157→169 verte. Ferme le dernier ⚠️ #11.

@@ -53,7 +53,7 @@ class RAGService:
         self._cross_encoder: CrossEncoderReranker | None = None
         self.prompt_builder = PromptBuilder()
         self.generator = AnswerGenerator(settings, self.prompt_builder)
-        self.query_transformer = QueryTransformer(self.generator)
+        self.query_transformer = QueryTransformer(self.generator)  # HyDE reste sur le 70b (le 8b dégrade le retrieval)
         self.graph_retriever = GraphRetriever(settings)
 
     def _init_vector_store(self, settings: Settings) -> QdrantVectorStore | None:

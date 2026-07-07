@@ -45,7 +45,7 @@ def parse_score(text: str) -> float:
     return max(0.0, min(1.0, float(match.group())))
 
 
-def judge_score(generator: Any, instruction: str, payload: str) -> float:
+def judge_score(generator: Any, instruction: str, payload: str, model: str | None = None) -> float:
     """Note 0-1 via le juge Groq, en reutilisant le client existant.
 
     `generator` = AnswerGenerator ; on appelle son `_generate_with_groq(messages)`
@@ -64,7 +64,7 @@ def judge_score(generator: Any, instruction: str, payload: str) -> float:
         {"role": "user", "content": f"{instruction}\n\n{payload}"},
     ]
     try:
-        raw = generator._generate_with_groq(messages)
+        raw = generator._generate_with_groq(messages, model=model)
     except Exception:
         return -1.0
     return parse_score(raw)
