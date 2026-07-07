@@ -206,13 +206,16 @@ Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriqu
 > 67,2→90,2 %** (CE off). HyDE = +31 Hit / +23 Recall même sur les questions dures ; pas
 > saturé (90,2 %) donc marge mesurable. Les 6 recall-misses restants = descriptif/sémantique
 > ("trois sabres"→"Tontatta Combat", "ombres/shadow"→"Yami Yami/darkness") + 1 global.
-> **Dual retrieval (implémenté, NON mesuré — quota Groq épuisé) :** `retrieve()` fusionne
-> la recherche dense sur la question ET le passage HyDE (max-cosinus), au lieu d'embarquer
-> le seul passage HyDE. **0 appel Groq en plus** (2 recherches denses). Toggle `HYDE_DUAL`
-> OFF par défaut, suite 171 verte. A/B à faire quota réinitialisé :
-> `HYDE=1 HYDE_DUAL=1 06_eval --sleep 5` vs `HYDE_DUAL=0` (baseline 83,6/90,2).
-> **Contrainte structurelle : le quota journalier Groq free est le vrai goulot** — 2 jours
-> de suite la mesure a été bloquée. Tier payant = le déblocage à plus forte valeur.
+> **Dual retrieval (mesuré, REJETÉ) :** `retrieve()` fusionne la recherche dense sur la
+> question ET le passage HyDE (max-cosinus). 0 appel Groq en plus. A/B n=61 (CE off,
+> 0 rate-limit) : **Hit@5 83,6→82,0 %, Recall@5 90,2 % INCHANGÉ**. → n'aide pas : les 6
+> recall-misses sont descriptifs/sémantiques où la question brute embarque AUSSI mal que
+> HyDE ("combat trois sabres"→"Tontatta Combat") ; rajouter le signal question dilue.
+> HyDE seul était déjà le meilleur des deux. Toggle `HYDE_DUAL` gardé OFF, code tésté (suite 173).
+> **Contrainte Groq free (limites `llama-3.3-70b` : RPD 1K, TPD 100K, RPM 30, TPM 12K) :**
+> le goulot est le **TPD (100K tokens/j)** — bouffé par l'eval génération (`07`, réponses
+> 2048 tok + juges), pas par les evals retrieval (HyDE léger ~200 tok). Piste : router HyDE
+> + juge vers `llama-3.1-8b-instant` (TPD 500K, RPD 14,4K) pour libérer le budget.
 > **Fait (#11 tests, sans Groq) :** `test_generator.py` (chaîne Groq→Ollama→snippet +
 > fallback streaming) et `test_graph_retriever.py` (parsing Cypher relations/subgraph +
 > dédup + dégradation gracieuse Neo4j down). Suite 157→169 verte. Ferme le dernier ⚠️ #11.
