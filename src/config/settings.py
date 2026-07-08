@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
 
     embedding_model: str = Field(default="BAAI/bge-large-en-v1.5", alias="EMBEDDING_MODEL")
+    # Device pour l'embedding. None = auto (MPS sur Mac). "cpu" pour le re-embed massif :
+    # bge-m3 sur MPS sature la mémoire unifiée et thrash ; CPU est stable (~100 min/37k).
+    embed_device: str | None = Field(default=None, alias="EMBED_DEVICE")
     llm_model: str | None = Field(default=None, alias="LLM_MODEL")
     groq_model: str = Field(default="llama-3.3-70b-versatile", alias="GROQ_MODEL")
     # Modele leger pour le JUGE d'eval (07) : sort juste un score 0-1, le 8b suffit et

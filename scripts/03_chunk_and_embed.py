@@ -48,7 +48,7 @@ def main() -> None:
     chunker.save_chunks_jsonl(chunks, chunks_path)
     logger.info("Chunks sauves: %s", chunks_path)
 
-    embedder = EmbeddingGenerator(settings.embedding_model)
+    embedder = EmbeddingGenerator(settings.embedding_model, device=settings.embed_device)
     embeddings = embedder.embed_texts([chunk.content for chunk in chunks])
 
     embeddings_path = settings.chunk_data_dir / "chunks_with_embeddings.jsonl"

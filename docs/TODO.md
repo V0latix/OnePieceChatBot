@@ -133,8 +133,8 @@ Faiblesses qui motivent ce backlog :
 | [LlamaIndex PropertyGraphIndex](https://www.llamaindex.ai/blog/customizing-property-graph-index-in-llamaindex) | Graph property + retrievers modulaires (Neo4j) | Référence pour valider ton retriever Neo4j maison | ✅ (framework) |
 | [Anthropic Contextual Retrieval](https://www.anthropic.com/engineering/contextual-retrieval) | Blurb contextuel avant embedding + BM25 | **La technique entière** (cf. §1) | ✅ ~1 $/1M tokens ou gratuit local |
 
-**Modèles locaux (M4) :** `bge-large-en-v1.5` (actuel) reste solide ; upgrade possible vers **bge-m3**
-(dense + sparse + ColBERT en un modèle, idéal pour l'hybride, multilingue). Runtime : **MLX ~50 % plus
+**Modèles locaux (M4) :** `bge-large-en-v1.5` (actuel) reste solide ; ~~upgrade vers **bge-m3**~~
+❌ **testé & rejeté** (cf. log ci-dessous : wash avec HyDE). Runtime : **MLX ~50 % plus
 rapide que llama.cpp** sur workloads d'embedding Apple Silicon.
 
 ---
@@ -222,6 +222,14 @@ Re-mesurer après **chaque** étape. Ne garder que ce qui améliore les métriqu
 > A/B **HyDE 8b vs 70b** : le 8b **dégrade** (Hit@5 83,6→75,4 %, Recall@5 90,2→83,6 %) → HyDE
 > **reste sur le 70b**. En revanche le **juge** (07) passe au 8b (sort juste un score ; testé :
 > réponse fidèle→0,9, hallucinée→0,0) → libère ~2K tok/question du budget 70b. Suite 172 verte.
+> **Testé & rejeté (embedding bge-m3, multilingue) :** re-embed complet des 36 949 chunks
+> (CPU forcé `EMBED_DEVICE=cpu` — bge-m3 sur MPS thrashait la mémoire unifiée et calait).
+> A/B n=61 (CE off, 0 rate-limit) : **sans HyDE** bge-m3 gagne (Hit@5 52,5→62,3 %, Recall@5
+> 67,2→75,4 %) — le multilingue comble l'écart FR→EN gratuitement ; **mais avec HyDE (prod)
+> c'est un wash** (Hit@5 83,6→82,0 %, Recall@5 90,2→91,8 %, ±1 question) car HyDE comble déjà
+> l'écart. → pas d'adoption : coût (re-upload 37k vecteurs, modèle plus lourd/lent) pour 0 gain
+> prod. Backup bge-large restauré, Qdrant jamais touché (`--dry-run`). Code gardé (utile) :
+> `EMBED_DEVICE` (CPU pour re-embed massif) + préfixe de requête adapté au modèle. Suite 174.
 > **Fait (#11 tests, sans Groq) :** `test_generator.py` (chaîne Groq→Ollama→snippet +
 > fallback streaming) et `test_graph_retriever.py` (parsing Cypher relations/subgraph +
 > dédup + dégradation gracieuse Neo4j down). Suite 157→169 verte. Ferme le dernier ⚠️ #11.
