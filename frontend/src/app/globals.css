@@ -2,42 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg-1: #08101d;
-  --bg-2: #15263f;
-  --bg-3: #311f17;
-  --accent: #d94f2b;
-  --accent-soft: #e7b24a;
-  --text-main: #f4e8cc;
-  --text-muted: #c9bc9f;
-  --font-display: "Baskerville", "Palatino Linotype", "Book Antiqua", "Times New Roman", serif;
-  --font-body: "Garamond", "Palatino", "Book Antiqua", "Times New Roman", serif;
-}
+@layer base {
+  :root {
+    /* MyDashboard — light brutalist. Flat surfaces, hard borders, no radius, no shadows. */
+    --background: 60 11% 96%; /* #f7f7f5 */
+    --foreground: 0 0% 4%; /* #0a0a0a */
 
-* {
-  box-sizing: border-box;
-}
+    --card: 60 15% 92%; /* #eeeee8 */
+    --card-foreground: 0 0% 4%;
 
-html,
-body {
-  margin: 0;
-  min-height: 100%;
-  color: var(--text-main);
-  background:
-    radial-gradient(circle at 12% 20%, rgba(217, 79, 43, 0.28), transparent 36%),
-    radial-gradient(circle at 88% 10%, rgba(231, 178, 74, 0.2), transparent 32%),
-    linear-gradient(150deg, var(--bg-1), var(--bg-2) 55%, var(--bg-3));
-}
+    --popover: 60 11% 96%;
+    --popover-foreground: 0 0% 4%;
 
-.card {
-  background: rgba(10, 21, 38, 0.72);
-  border: 1px solid rgba(231, 178, 74, 0.2);
-  box-shadow: 0 10px 40px rgba(231, 178, 74, 0.12);
-  backdrop-filter: blur(7px);
+    --primary: 221 79% 48%; /* #1a56db */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 221 79% 39%; /* #1447b0 */
+
+    --secondary: 60 15% 92%;
+    --secondary-foreground: 0 0% 4%;
+
+    --muted: 60 15% 92%;
+    --muted-foreground: 0 0% 47%; /* #777777 */
+
+    --accent: 221 79% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 71% 47%; /* #cc2222 */
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 150 65% 29%; /* #1a7a4a */
+    --success-foreground: 0 0% 100%;
+
+    /* The brutalist signature: the border IS the foreground. */
+    --border: 0 0% 4%;
+    --input: 0 0% 4%;
+    --ring: 221 79% 48%;
+
+    --radius: 0rem;
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    margin: 0;
+    min-height: 100%;
+  }
 }
 
 .fade-in {
-  animation: fadeIn 0.6s ease both;
+  animation: fadeIn 0.4s ease both;
 }
 
 @keyframes fadeIn {

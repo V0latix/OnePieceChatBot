@@ -14,11 +14,10 @@ router = APIRouter(prefix="/search", tags=["search"])
 def search(
     q: str = Query(min_length=1),
     type: str | None = Query(default=None),
-    spoiler_limit_arc: str | None = Query(default=None),
     service: RAGService = Depends(get_rag_service),
 ) -> SearchResponse:
     """Expose les meilleurs chunks retrieval pour une requete."""
-    results = service.search(q, entity_type=type, spoiler_limit_arc=spoiler_limit_arc)
+    results = service.search(q, entity_type=type)
     payload = [
         SearchResult(
             chunk_id=result.chunk_id,

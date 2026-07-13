@@ -70,7 +70,6 @@ Question
   → src/rag/retriever.py            (hybrid: vector + keyword + graph signals)
       ├─ Qdrant Cloud search (primary)
       └─ Local JSONL cosine similarity (fallback)
-  → src/rag/spoiler_filter.py       (arc-based spoiler filtering, applied post-rerank)
   → src/rag/reranker.py             (RRF fusion of vector + BM25 rankings + graph bias)
   → src/rag/graph_retriever.py      (Neo4j Cypher queries)
   → src/rag/prompt_builder.py       (assemble context + citations)
@@ -103,12 +102,14 @@ Routes live in `src/api/routes/*.py` (one file per resource); the `slowapi` limi
 
 ### Frontend
 
-Next.js 16 + React 19 + Tailwind CSS + TypeScript. Key components:
+Next.js 16 + React 19 + Tailwind v3 + shadcn/ui + TypeScript. Key components:
 - `ChatInterface.tsx` — main Q&A loop
-- `GraphViewer.tsx` + `D3ForceGraph.tsx` — interactive knowledge graph
-- `SpoilerFilter.tsx` — arc-based spoiler limiting (sends `spoiler_limit_arc` to backend)
+- `GraphViewer.tsx` + `D3ForceGraph.tsx` — knowledge graph (static SVG radial layout, no d3 dependency despite the name)
 - `SearchBar.tsx` — direct chunk search via `GET /api/search`
+- `components/ui/*` — shadcn primitives (button, input, card, tabs, badge)
 - `lib/api.ts` — all API calls to the backend
+
+**Theme = light brutalist** (`mytheme.md`): flat surfaces, hard black borders, `--radius: 0`, no shadows, Syne (display) + Space Mono (body), accent `#1a56db`. Tokens are HSL CSS vars in `src/app/globals.css`, wired into `tailwind.config.js`. No dark mode.
 
 Frontend talks to the backend at `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:8000`).
 

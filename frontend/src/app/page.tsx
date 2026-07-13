@@ -6,7 +6,6 @@ import ChatInterface from "../components/ChatInterface";
 import EntityCard from "../components/EntityCard";
 import GraphViewer from "../components/GraphViewer";
 import SearchBar from "../components/SearchBar";
-import SpoilerFilter from "../components/SpoilerFilter";
 import { EntityResponse, fetchEntity, fetchGraph, GraphResponse } from "../lib/api";
 
 interface PanelState {
@@ -59,7 +58,6 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
 }
 
 export default function HomePage() {
-  const [spoilerLimit, setSpoilerLimit] = useState("Aucun");
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
   const [panel, dispatch] = useReducer(panelReducer, INITIAL);
 
@@ -100,21 +98,22 @@ export default function HomePage() {
   }, [selectedEntity]);
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-6 md:gap-6 md:px-8 md:py-10">
-      <header className="fade-in rounded-2xl border border-gold/25 bg-[#0f1d34]/70 p-5 md:p-7">
-        <p className="text-xs uppercase tracking-[0.22em] text-gold">Grand Line Intelligence</p>
-        <h1 className="text-5xl leading-none tracking-wide [font-family:var(--font-display)] md:text-7xl">One Piece RAG</h1>
-        <p className="mt-3 max-w-3xl text-sm text-[#d2c5a8] md:text-base">
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-10">
+      <header className="fade-in border border-foreground bg-card p-6 md:p-8">
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">Grand Line Intelligence</p>
+        <h1 className="mt-2 font-display text-5xl font-extrabold uppercase leading-none tracking-tighter md:text-7xl">
+          One Piece RAG
+        </h1>
+        <p className="mt-4 max-w-3xl text-sm text-muted-foreground md:text-base">
           Pose n&apos;importe quelle question sur le canon One Piece. Les reponses sont justifiees par des sources wiki/arcs et
           enrichies par un knowledge graph.
         </p>
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-[1.7fr_1fr]">
-        <ChatInterface spoilerLimitArc={spoilerLimit} onPrimaryEntityChange={setSelectedEntity} />
-        <div className="space-y-5">
-          <SpoilerFilter value={spoilerLimit} onChange={setSpoilerLimit} />
-          <SearchBar spoilerLimitArc={spoilerLimit} />
+      <div className="grid gap-6 lg:grid-cols-[1.7fr_1fr]">
+        <ChatInterface onPrimaryEntityChange={setSelectedEntity} />
+        <div className="flex flex-col gap-6">
+          <SearchBar />
           <EntityCard entity={panel.entity} loading={panel.entityLoading} error={panel.entityError} />
         </div>
       </div>

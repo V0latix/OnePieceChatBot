@@ -1,7 +1,7 @@
 export default function LoadingIndicator({ label = "Chargement..." }: { label?: string }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-[#102036] px-3 py-1 text-xs text-gold">
-      <span className="h-2 w-2 animate-pulse rounded-full bg-gold" />
+    <div className="inline-flex items-center gap-2 border border-foreground bg-card px-3 py-1 text-xs uppercase tracking-wide">
+      <span className="h-2 w-2 animate-pulse bg-primary" />
       <span>{label}</span>
     </div>
   );

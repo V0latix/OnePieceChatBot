@@ -20,7 +20,6 @@ class AskRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     question: str = Field(min_length=1)
-    spoiler_limit_arc: str | None = None
     history: list[ConversationMessage] = Field(default_factory=list, max_length=20)
 
 

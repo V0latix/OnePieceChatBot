@@ -17,7 +17,7 @@ router = APIRouter(prefix="/ask", tags=["ask"])
 def ask(request: Request, payload: AskRequest, service: RAGService = Depends(get_rag_service)) -> AskResponse:
     """Repond a une question via pipeline RAG."""
     history = [msg.model_dump() for msg in payload.history] if payload.history else None
-    return service.ask(payload.question, spoiler_limit_arc=payload.spoiler_limit_arc, history=history)
+    return service.ask(payload.question, history=history)
 
 
 @router.post("/stream")
@@ -32,7 +32,7 @@ def ask_stream(request: Request, payload: AskRequest, service: RAGService = Depe
     """
     history = [msg.model_dump() for msg in payload.history] if payload.history else None
     return StreamingResponse(
-        service.ask_stream(payload.question, spoiler_limit_arc=payload.spoiler_limit_arc, history=history),
+        service.ask_stream(payload.question, history=history),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

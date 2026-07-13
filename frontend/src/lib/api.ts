@@ -47,25 +47,6 @@ function apiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 }
 
-export async function askQuestion(question: string, spoilerLimitArc?: string): Promise<AskResponse> {
-  const response = await fetch(`${apiBaseUrl()}/api/ask`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      question,
-      spoiler_limit_arc: spoilerLimitArc && spoilerLimitArc !== "Aucun" ? spoilerLimitArc : null,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
-  }
-
-  return (await response.json()) as AskResponse;
-}
-
 export interface ConversationMessage {
   role: "user" | "assistant";
   content: string;
@@ -81,7 +62,6 @@ export interface StreamCallbacks {
 export async function askQuestionStream(
   question: string,
   callbacks: StreamCallbacks,
-  spoilerLimitArc?: string,
   history?: ConversationMessage[],
 ): Promise<void> {
   const response = await fetch(`${apiBaseUrl()}/api/ask/stream`, {
@@ -89,7 +69,6 @@ export async function askQuestionStream(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       question,
-      spoiler_limit_arc: spoilerLimitArc && spoilerLimitArc !== "Aucun" ? spoilerLimitArc : null,
       history: history ?? [],
     }),
   });
@@ -149,10 +128,9 @@ export interface SearchResult {
   score: number;
 }
 
-export async function searchChunks(query: string, entityType?: string, spoilerLimitArc?: string): Promise<SearchResult[]> {
+export async function searchChunks(query: string, entityType?: string): Promise<SearchResult[]> {
   const params = new URLSearchParams({ q: query });
   if (entityType) params.set("type", entityType);
-  if (spoilerLimitArc && spoilerLimitArc !== "Aucun") params.set("spoiler_limit_arc", spoilerLimitArc);
   const response = await fetch(`${apiBaseUrl()}/api/search?${params.toString()}`);
   if (!response.ok) {
     throw new Error(`Search API error: ${response.status}`);
