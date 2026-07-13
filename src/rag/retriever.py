@@ -230,7 +230,7 @@ class HybridRetriever:
                 entity_type=row.entity_type,
                 section=row.section,
                 content=row.content,
-                source_url="",
+                source_url=row.source_url,
                 vector_score=float(row.similarity),
             )
             for row in rows

@@ -53,7 +53,7 @@ class PromptBuilder:
         for index, result in enumerate(results[:top_k], start=1):
             lines.append(
                 f"[{index}] Entite: {result.entity_name} | Type: {result.entity_type} | "
-                f"Section: {result.section} | Source: {result.source_url or 'supabase'}\n"
+                f"Section: {result.section} | Source: {result.source_url or 'One Piece Wiki'}\n"
                 f"{result.content}"
             )
         return "\n\n".join(lines)

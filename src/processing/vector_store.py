@@ -39,6 +39,7 @@ class VectorSearchResult(BaseModel):
     section: str
     content: str
     categories: list[str] = []
+    source_url: str = ""
     similarity: float
 
 
@@ -139,6 +140,7 @@ class QdrantVectorStore:
                     section=hit.payload.get("section", ""),
                     content=hit.payload.get("content", ""),
                     categories=hit.payload.get("categories", []),
+                    source_url=hit.payload.get("source_url", ""),
                     similarity=hit.score,
                 )
                 for hit in response.points
