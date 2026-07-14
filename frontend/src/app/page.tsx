@@ -1,101 +1,52 @@
 "use client";
 
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useState } from "react";
 
 import ChatInterface from "../components/ChatInterface";
 import EntityCard from "../components/EntityCard";
-import GraphViewer from "../components/GraphViewer";
 import SearchBar from "../components/SearchBar";
-import { EntityResponse, fetchEntity, fetchGraph, GraphResponse } from "../lib/api";
+import { EntityResponse, fetchEntity } from "../lib/api";
 
-interface PanelState {
+const BACKEND_COMMANDS = [
+  "PYTHONPATH=src uvicorn api.main:app --reload",
+  "ngrok http --url=overdistant-colloquial-leonora.ngrok-free.dev 8000",
+];
+
+interface EntityFetch {
+  name: string;
   entity: EntityResponse | null;
-  graph: GraphResponse | null;
-  entityLoading: boolean;
-  graphLoading: boolean;
-  entityError: string | null;
-  graphError: string | null;
-}
-
-type PanelAction =
-  | { type: "reset" }
-  | { type: "loading" }
-  | { type: "entity_ok"; payload: EntityResponse }
-  | { type: "entity_err" }
-  | { type: "entity_done" }
-  | { type: "graph_ok"; payload: GraphResponse }
-  | { type: "graph_err" }
-  | { type: "graph_done" };
-
-const INITIAL: PanelState = {
-  entity: null,
-  graph: null,
-  entityLoading: false,
-  graphLoading: false,
-  entityError: null,
-  graphError: null,
-};
-
-function panelReducer(state: PanelState, action: PanelAction): PanelState {
-  switch (action.type) {
-    case "reset":
-      return INITIAL;
-    case "loading":
-      return { ...INITIAL, entityLoading: true, graphLoading: true };
-    case "entity_ok":
-      return { ...state, entity: action.payload, entityError: null };
-    case "entity_err":
-      return { ...state, entity: null, entityError: "Impossible de charger la fiche entite." };
-    case "entity_done":
-      return { ...state, entityLoading: false };
-    case "graph_ok":
-      return { ...state, graph: action.payload, graphError: null };
-    case "graph_err":
-      return { ...state, graph: null, graphError: "Impossible de charger le sous-graphe." };
-    case "graph_done":
-      return { ...state, graphLoading: false };
-  }
+  error: string | null;
 }
 
 export default function HomePage() {
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
-  const [panel, dispatch] = useReducer(panelReducer, INITIAL);
+  // Le resultat porte le nom demande : setState ne se fait que dans les callbacks
+  // async, jamais dans le corps de l'effet (cf. react-hooks/set-state-in-effect).
+  const [fetched, setFetched] = useState<EntityFetch | null>(null);
 
   useEffect(() => {
-    if (!selectedEntity) {
-      dispatch({ type: "reset" });
-      return;
-    }
+    if (!selectedEntity) return;
 
     let cancelled = false;
-    dispatch({ type: "loading" });
+    const name = selectedEntity;
 
-    fetchEntity(selectedEntity)
+    fetchEntity(name)
       .then((payload) => {
-        if (!cancelled) dispatch({ type: "entity_ok", payload });
+        if (!cancelled) setFetched({ name, entity: payload, error: null });
       })
       .catch(() => {
-        if (!cancelled) dispatch({ type: "entity_err" });
-      })
-      .finally(() => {
-        if (!cancelled) dispatch({ type: "entity_done" });
-      });
-
-    fetchGraph(selectedEntity, 2)
-      .then((payload) => {
-        if (!cancelled) dispatch({ type: "graph_ok", payload });
-      })
-      .catch(() => {
-        if (!cancelled) dispatch({ type: "graph_err" });
-      })
-      .finally(() => {
-        if (!cancelled) dispatch({ type: "graph_done" });
+        if (!cancelled) setFetched({ name, entity: null, error: "Impossible de charger la fiche entite." });
       });
 
     return () => {
       cancelled = true;
     };
   }, [selectedEntity]);
+
+  const settled = fetched && fetched.name === selectedEntity ? fetched : null;
+  const entity = settled?.entity ?? null;
+  const error = settled?.error ?? null;
+  const loading = selectedEntity !== null && settled === null;
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-8 md:py-10">
@@ -105,8 +56,7 @@ export default function HomePage() {
           One Piece RAG
         </h1>
         <p className="mt-4 max-w-3xl text-sm text-muted-foreground md:text-base">
-          Pose n&apos;importe quelle question sur le canon One Piece. Les reponses sont justifiees par des sources wiki/arcs et
-          enrichies par un knowledge graph.
+          Pose n&apos;importe quelle question sur le canon One Piece. Les reponses sont justifiees par des sources wiki.
         </p>
       </header>
 
@@ -114,11 +64,22 @@ export default function HomePage() {
         <ChatInterface onPrimaryEntityChange={setSelectedEntity} />
         <div className="flex flex-col gap-6">
           <SearchBar />
-          <EntityCard entity={panel.entity} loading={panel.entityLoading} error={panel.entityError} />
+          <EntityCard entity={entity} loading={loading} error={error} />
         </div>
       </div>
 
-      <GraphViewer graph={panel.graph} loading={panel.graphLoading} error={panel.graphError} />
+      <footer className="border border-foreground bg-card p-4">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+          Backend local — commandes a lancer
+        </p>
+        <div className="mt-2 flex flex-col gap-1">
+          {BACKEND_COMMANDS.map((command) => (
+            <code key={command} className="overflow-x-auto border border-foreground bg-background px-3 py-2 text-xs">
+              {command}
+            </code>
+          ))}
+        </div>
+      </footer>
     </main>
   );
 }

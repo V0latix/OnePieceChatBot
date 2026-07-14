@@ -96,7 +96,7 @@ Routes live in `src/api/routes/*.py` (one file per resource); the `slowapi` limi
 | `POST /api/ask` | Main RAG query → answer + sources + entities + confidence |
 | `POST /api/ask/stream` | Same as /ask but streams SSE (events: metadata, token, done) |
 | `GET /api/entity/{name}` | Entity detail (name, type, infobox, relations) |
-| `GET /api/graph/{entity}?depth=2` | Subgraph for D3 visualization |
+| `GET /api/graph/{entity}?depth=2` | Subgraph (no frontend consumer since the graph viewer was removed) |
 | `GET /api/search?q=...` | Raw chunk retrieval |
 | `GET /api/health` | System health (chunk count, graph nodes) |
 
@@ -104,7 +104,6 @@ Routes live in `src/api/routes/*.py` (one file per resource); the `slowapi` limi
 
 Next.js 16 + React 19 + Tailwind v3 + shadcn/ui + TypeScript. Key components:
 - `ChatInterface.tsx` — main Q&A loop
-- `GraphViewer.tsx` + `D3ForceGraph.tsx` — knowledge graph (static SVG radial layout, no d3 dependency despite the name)
 - `SearchBar.tsx` — direct chunk search via `GET /api/search`
 - `components/ui/*` — shadcn primitives (button, input, card, tabs, badge)
 - `lib/api.ts` — all API calls to the backend

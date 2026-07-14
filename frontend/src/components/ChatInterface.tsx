@@ -114,7 +114,8 @@ export default function ChatInterface({ onPrimaryEntityChange }: ChatInterfacePr
     } catch (err) {
       setMessages((current) => {
         const idx = streamingIndexRef.current;
-        const errorContent = "Erreur API. Verifie que le backend FastAPI est demarre sur http://localhost:8000.";
+        const errorContent =
+          "Backend injoignable. Lance les deux commandes affichees en bas de page (uvicorn, puis le tunnel ngrok).";
         if (idx !== null) {
           const updated = [...current];
           updated[idx] = { ...updated[idx], content: errorContent, streaming: false };

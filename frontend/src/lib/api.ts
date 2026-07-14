@@ -26,23 +26,6 @@ export interface EntityResponse {
   relations: EntityRelation[];
 }
 
-export interface GraphNode {
-  id: string;
-  label: string;
-  type: string;
-}
-
-export interface GraphEdge {
-  source: string;
-  target: string;
-  type: string;
-}
-
-export interface GraphResponse {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-}
-
 function apiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 }
@@ -137,14 +120,4 @@ export async function searchChunks(query: string, entityType?: string): Promise<
   }
   const data = (await response.json()) as { results: SearchResult[] };
   return data.results;
-}
-
-export async function fetchGraph(name: string, depth = 2): Promise<GraphResponse> {
-  const response = await fetch(
-    `${apiBaseUrl()}/api/graph/${encodeURIComponent(name)}?depth=${encodeURIComponent(String(depth))}`,
-  );
-  if (!response.ok) {
-    throw new Error(`Graph API error: ${response.status}`);
-  }
-  return (await response.json()) as GraphResponse;
 }
