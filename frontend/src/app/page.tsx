@@ -7,9 +7,14 @@ import EntityCard from "../components/EntityCard";
 import SearchBar from "../components/SearchBar";
 import { EntityResponse, fetchEntity } from "../lib/api";
 
-const BACKEND_COMMANDS = [
-  "PYTHONPATH=src uvicorn api.main:app --reload",
-  "ngrok http --url=overdistant-colloquial-leonora.ngrok-free.dev 8000",
+// Doit rester aligne sur la procedure de redemarrage du README.
+const BACKEND_COMMANDS: { terminal: string; command: string }[] = [
+  { terminal: "Terminal 1 — backend (depuis la racine du repo)", command: "source .venv/bin/activate" },
+  { terminal: "", command: "PYTHONPATH=src uvicorn api.main:app --host 127.0.0.1 --port 8000" },
+  {
+    terminal: "Terminal 2 — tunnel ngrok",
+    command: "ngrok http --url=overdistant-colloquial-leonora.ngrok-free.dev 8000",
+  },
 ];
 
 interface EntityFetch {
@@ -72,11 +77,16 @@ export default function HomePage() {
         <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
           Backend local — commandes a lancer
         </p>
-        <div className="mt-2 flex flex-col gap-1">
-          {BACKEND_COMMANDS.map((command) => (
-            <code key={command} className="overflow-x-auto border border-foreground bg-background px-3 py-2 text-xs">
-              {command}
-            </code>
+        <div className="mt-3 flex flex-col gap-1">
+          {BACKEND_COMMANDS.map(({ terminal, command }) => (
+            <div key={command} className="flex flex-col gap-1">
+              {terminal ? (
+                <p className="mt-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{terminal}</p>
+              ) : null}
+              <code className="overflow-x-auto whitespace-nowrap border border-foreground bg-background px-3 py-2 text-xs">
+                {command}
+              </code>
+            </div>
           ))}
         </div>
       </footer>
